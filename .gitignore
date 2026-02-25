@@ -1,2 +1,4 @@
 contents/*
+!contents/.gitkeep
 plan/*
+!plan/.gitkeep

@@ -4,8 +4,8 @@ description: Sửa và tối ưu bài viết theo chuẩn SEO và template HTML 
 
 # Sửa bài viết SEO
 
-1. Đọc file `/var/www/latex/.agent/skills/SEO-content.md` để nắm rules
-2. Đọc file `/var/www/latex/template.txt` để nắm template HTML mẫu
+1. Đọc file `.agent/skills/SEO-content.md` để nắm rules
+2. Đọc các file mẫu trong `template/` (`en.txt`, `vi.txt`, `title.txt`, `social_content.txt`) để nắm định dạng đầu ra mong muốn.
 
 ## Quy trình:
 
@@ -28,8 +28,10 @@ description: Sửa và tối ưu bài viết theo chuẩn SEO và template HTML 
 - Thêm FAQ nếu thiếu
 
 ### Bước 4: Xuất bài viết đã sửa (SONG NGỮ)
-- Xuất tiêu đề + meta description Tiếng Việt và Tiếng Anh
-- Xuất HTML CKEditor hoàn chỉnh Tiếng Việt
-- Xuất HTML CKEditor hoàn chỉnh Tiếng Anh
+**LƯU Ý QUAN TRỌNG:** Toàn bộ các file đầu ra PHẢI được lưu vào trong cùng một thư mục mới có đường dẫn: `contents/[slug_tieu_de_bai_viet]/` (tự động tạo thư mục này nếu chưa tồn tại).
+- Xuất file `title.txt` (Tiêu đề + Meta Description Tiếng Việt và Tiếng Anh)
+- Xuất file `vi.txt` (HTML CKEditor hoàn chỉnh Tiếng Việt)
+- Xuất file `en.txt` (HTML CKEditor hoàn chỉnh Tiếng Anh)
+- Xuất file `social_content.txt` (Content FB/LinkedIn ngắn + hashtag + link)
 - Liệt kê các thay đổi đã thực hiện
 - Chạy checklist cuối cùng + Bilingual checklist

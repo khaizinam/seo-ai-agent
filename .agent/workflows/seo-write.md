@@ -4,8 +4,8 @@ description: Viết bài SEO nhanh - lập dàn ý và xuất HTML CKEditor
 
 # Viết bài SEO nhanh
 
-1. Đọc file `/var/www/latex/.agent/skills/SEO-content.md` để nắm rules
-2. Đọc file `/var/www/latex/template.txt` để nắm template HTML mẫu
+1. Đọc file `.agent/skills/SEO-content.md` để nắm rules
+2. Đọc các file mẫu trong `template/` (`en.txt`, `vi.txt`, `title.txt`, `social_content.txt`) để nắm định dạng đầu ra mong muốn.
 
 ## Quy trình:
 
@@ -30,7 +30,8 @@ description: Viết bài SEO nhanh - lập dàn ý và xuất HTML CKEditor
 - Kiểm tra checklist + Bilingual checklist trước khi xuất
 
 ### Thứ tự xuất đầu ra:
-1. Tiêu đề VI + EN
-2. Meta Description VI + EN
-3. Bài viết HTML Tiếng Việt
-4. Bài viết HTML Tiếng Anh
+**LƯU Ý QUAN TRỌNG:** Toàn bộ các file đầu ra PHẢI được lưu vào trong cùng một thư mục mới có đường dẫn: `contents/[slug_tieu_de_bai_viet]/` (tự động tạo thư mục này nếu chưa tồn tại).
+1. `title.txt` (Tiêu đề + Meta Description Tiếng Việt & Tiếng Anh)
+2. `vi.txt` (Bài viết HTML Tiếng Việt)
+3. `en.txt` (Bài viết HTML Tiếng Anh)
+4. `social_content.txt` (Facebook, LinkedIn, hashtag, link)

@@ -6,8 +6,8 @@ description: Quy trình SEO đầy đủ - từ nghiên cứu từ khóa đến 
 
 Đọc skill SEO trước khi bắt đầu:
 
-1. Đọc file `/var/www/latex/.agent/skills/SEO-content.md` để nắm rules
-2. Đọc file `/var/www/latex/template.txt` để nắm template HTML mẫu
+1. Đọc file `.agent/skills/SEO-content.md` để nắm rules
+2. Đọc các file mẫu trong `template/` (`en.txt`, `vi.txt`, `title.txt`, `social_content.txt`) để nắm định dạng đầu ra mong muốn.
 
 ## Các bước thực hiện:
 
@@ -43,7 +43,8 @@ description: Quy trình SEO đầy đủ - từ nghiên cứu từ khóa đến 
 - Xuất bản
 
 ### Thứ tự xuất đầu ra cuối cùng:
-1. Tiêu đề Tiếng Việt + Tiếng Anh
-2. Meta Description Tiếng Việt + Tiếng Anh
-3. Bài viết HTML Tiếng Việt
-4. Bài viết HTML Tiếng Anh
+**LƯU Ý QUAN TRỌNG:** Toàn bộ các file đầu ra PHẢI được lưu vào trong cùng một thư mục mới có đường dẫn: `contents/[slug_tieu_de_bai_viet]/` (tự động tạo thư mục này nếu chưa tồn tại).
+1. `title.txt` (Tiêu đề + Meta Description Tiếng Việt & Tiếng Anh)
+2. `vi.txt` (Bài viết HTML Tiếng Việt)
+3. `en.txt` (Bài viết HTML Tiếng Anh)
+4. `social_content.txt` (Facebook & LinkedIn kèm hashtag, link)
