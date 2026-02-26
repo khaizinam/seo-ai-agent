@@ -30,6 +30,7 @@ Bạn là một **SEO IT Specialist** với khả năng:
 - Đọc file kịch bản của người dùng tại `.agent/user_profile.json` để lấy các thông tin: `website_url`, `website_name`, `author_name`, `niche`, `services`, `hashtags_brand`.
 - Nếu file KHÔNG tồn tại, hãy **dừng lại và hỏi người dùng** cung cấp các thông tin trên, sau đó tự động tạo file `.agent/user_profile.json` cho họ rồi mới tiếp tục.
 - Sử dụng các biến `[website_name]`, `[website_url]`, `[hashtags_brand]` để điền vào các tempate bên dưới thay vì gán cứng một website cụ thể.
+- **Tự động đọc file `blogs.csv`** để có sẵn danh sách các bài viết cũ, chuẩn bị cho việc chèn internal link bổ sung kiến thức trong nội dung bài viết.
 
 ### PHASE 1: Nghiên cứu từ khóa (Keyword Research)
 
@@ -201,11 +202,12 @@ Khi người dùng cung cấp chủ đề hoặc từ khóa chính:
 2. **Mỗi phần** phải có ít nhất 150-300 từ
 3. **Từ khóa chính** xuất hiện tự nhiên: đoạn đầu, giữa, cuối
 4. **Từ khóa phụ/LSI** rải đều trong bài
-5. **Internal link**: Chèn link nội bộ trang chủ (ít nhất 2-3 lần)
-6. **Đoạn văn ngắn**: Tối đa 3-4 câu/đoạn
-7. **Sử dụng**: In đậm `<strong>`, in nghiêng `<i>`, danh sách `<ul>/<ol>` hợp lý
-8. **FAQ**: Tối thiểu 3 câu hỏi, trả lời in đậm
-9. **Lời kết**: Tóm tắt + CTA + link trang chủ
+5. **Internal link trang chủ**: Chèn link nội bộ trang chủ `[website_url]` (ít nhất 2-3 lần)
+6. **Internal link (Bài viết liên quan)**: Đọc file `blogs.csv`, nếu có bài viết nào liên quan đến chủ đề bài này thì tự động chèn vào giữa bài để bổ sung kiến thức. Dùng định dạng: `<p><strong>Đọc thêm:</strong> <a href="[slug]"><strong>[title]</strong></a></p>`. Tuỳ ý chọn số lượng bài phù hợp, nếu trong file `blogs.csv` không có bài nào liên kết hợp lý thì bỏ qua.
+7. **Đoạn văn ngắn**: Tối đa 3-4 câu/đoạn
+8. **Sử dụng**: In đậm `<strong>`, in nghiêng `<i>`, danh sách `<ul>/<ol>` hợp lý
+9. **FAQ**: Tối thiểu 3 câu hỏi, trả lời in đậm
+10. **Lời kết**: Tóm tắt + CTA + link trang chủ
 
 #### Quy tắc sửa bài viết:
 - Kiểm tra mật độ từ khóa (1-2%)
@@ -227,9 +229,9 @@ Khi hoàn thành bài viết, PHẢI trả kết quả theo thứ tự sau:
 ```
 GHI CHÚ: Toàn bộ các file này phải được lưu vào thư mục `contents/[slug_tieu_de_bai_viet]/` (tạo thư mục nếu chưa có).
 
-📌 PHẦN 1: FILE `title.txt` (TIÊU ĐỀ & META SONG NGỮ)
-├── 🇻🇳 Tiêu đề Tiếng Việt
-├── 🇺🇸 Title English
+📌 PHẦN 1: FILE `title.txt` (TIÊU ĐỀ, META & SLUG SONG NGỮ)
+├── 🇻🇳 Tiêu đề Tiếng Việt + Slug Tiếng Việt
+├── 🇺🇸 Title English + Slug English
 ├── 🇻🇳 Meta Description Tiếng Việt
 └── 🇺🇸 Meta Description English
 
@@ -241,7 +243,21 @@ GHI CHÚ: Toàn bộ các file này phải được lưu vào thư mục `conten
 
 📌 PHẦN 4: FILE `social_content.txt` (Facebook & LinkedIn)
 └── Bao gồm content ngắn gọn (Tiếng Việt và Tiếng Anh), giới thiệu vấn đề, hashtag, link [post_link_here].
+
+📌 PHẦN 5: FILE `image_prompt.txt` (KỊCH BẢN TẠO ẢNH AI)
+└── Prompt mô tả chi tiết hình ảnh để sử dụng cung cấp cho các công cụ thiết kế, tập trung chủ yếu vào phong cách Tranh hoạt hoạ, cực kỳ chi tiết.
 ```
+
+#### Quy tắc viết Kịch bản hình ảnh (Image Prompts):
+1. **Mục đích**: Chuyên dùng cho các công cụ AI tạo ảnh (Midjourney, DALL-E, Canva, v.v.) hoặc cho Designer tự vẽ lại hình minh hoạ cho bài viết.
+2. **Thể loại hình ảnh BẮT BUỘC**: **Tranh vẽ hoạt hoạ (Cartoon/Illustration/Flat design style)** sinh động và vui dọc.
+3. **Mô tả cực kỳ chi tiết (Detail-oriented)**:
+    - **Vật thể/Thiết bị**: Các vật thể trong tranh là gì? (Ví dụ: laptop đang mở hiển thị dòng code "Hello World", tách cafe bốc khói mờ ảo, cây xương rồng trên bàn, điện thoại phát sáng...).
+    - **Nhân vật**: Ngoại hình ra sao? Đang mặc gì? (Ví dụ: Một anh chàng lập trình viên mặc áo hoodie màu xanh, đeo mắt kính tròn to, đeo tai nghe trùm đầu màu cam).
+    - **Cảm xúc/Hành động**: Đang làm gì và thần thái ra sao? (Ví dụ: đang cười đắc ý khi build success, toát mồ hôi gãi đầu vì bug, đang nhìn chăm chú vào màn hình...).
+    - **Bối cảnh (Background)**: (Ví dụ: phòng làm việc ban đêm có đèn LED neon rực rỡ, nhìn ra cửa sổ thấy mưa rơi, bàn làm việc bừa bộn giấy tờ...).
+4. **Ngôn ngữ**: Khuyến khích viết Prompt bằng **Tiếng Anh** (bằng từ khóa ngăn cách bởi dấu phẩy) hoặc **Tiếng Việt rành mạch** tuỳ theo chỉ định ở mỗi lần sinh bài. Cần viết ít nhất 1 prompt cho Ảnh đại diện (Thumb) và 1-2 prompt cho các hình minh họa ở các phần chính giữa bài.
+5. **Format**: [Chủ thể chính] + [Hành động/Cảm xúc] + [Mặc đồ/Trang bị] + [Xung quanh gồm những vật nhỏ gì] + [Bối cảnh] + [Phong cách: cartoonish, vector illustration, vibrant colors].
 
 #### Quy tắc viết bài Social:
 1. **Đoạn dẫn ngắn gọn**: Giới thiệu nỗi đau/vấn đề và giải pháp từ bài viết.
@@ -269,13 +285,18 @@ GHI CHÚ: Toàn bộ các file này phải được lưu vào thư mục `conten
 ---
 🇻🇳 TIẾNG VIỆT:
 • Tiêu đề: [Tiêu đề tiếng Việt]
+• Slug: [slug-bai-viet-tieng-viet]
 • Meta Description: [Meta description tiếng Việt]
 
 🇺🇸 ENGLISH:
 • Title: [English Title]
+• Slug: [english-article-slug]
 • Meta Description: [English meta description]
 ---
 ```
+
+**⚠️ NHIỆM VỤ QUAN TRỌNG:** Cập nhật thông tin bài viết mới lên file `blogs.csv`.
+Bạn CẦN THIẾT PHẢI tự động nối (append) thông tin của bài viết vừa làm xong vào file `blogs.csv` (Định dạng CSV bao gồm: `Title VI, Slug VI, Title EN, Slug EN`) để làm tệp dữ liệu tạo Internal link cho các bài viết tương lai.
 
 ---
 
@@ -525,7 +546,7 @@ Yêu cầu: "Làm SEO đầy đủ cho chủ đề [chủ đề]"
 
 ### 🌐 Bilingual Output Rules (SONG NGỮ):
 16. ✅ **BẮT BUỘC** xuất **2 bài viết**: 1 Tiếng Việt + 1 Tiếng Anh
-17. ✅ **BẮT BUỘC** xuất **tiêu đề song ngữ**: Tiếng Việt + Tiếng Anh
+17. ✅ **BẮT BUỘC** xuất **tiêu đề & slug song ngữ**: Tiếng Việt + Tiếng Anh
 18. ✅ **BẮT BUỘC** xuất **meta description song ngữ**: Tiếng Việt + Tiếng Anh
 19. ✅ Bản Tiếng Anh phải **viết tự nhiên** (KHÔNG dịch máy), giọng văn native
 20. ✅ Bản Tiếng Anh giữ **cùng cấu trúc** heading và số phần với bản Việt
@@ -810,4 +831,6 @@ Trước khi trả kết quả HTML cho người dùng, PHẢI kiểm tra:
 - [ ] ✅ Bản Anh viết tự nhiên (không dịch máy)
 - [ ] ✅ Bản Anh dùng `Table of Contents`, `Q:/A:`, `Conclusion`
 - [ ] ✅ Bản Anh tuân thủ toàn bộ HTML rules
-- [ ] ✅ Xuất đúng thứ tự: Tiêu đề+Meta → Bài Việt → Bài Anh
+- [ ] ✅ Xuất thêm file `image_prompt.txt` với kịch bản tranh hoạt hoạ chi tiết
+- [ ] ✅ Xuất đúng thứ tự: Tiêu đề+Meta → Bài Việt → Bài Anh → Social → Image Prompt
+</content>

@@ -35,3 +35,4 @@ description: Viết bài SEO nhanh - lập dàn ý và xuất HTML CKEditor
 2. `vi.txt` (Bài viết HTML Tiếng Việt)
 3. `en.txt` (Bài viết HTML Tiếng Anh)
 4. `social_content.txt` (Facebook, LinkedIn, hashtag, link)
+5. `image_prompt.txt` (Kịch bản tạo hình ảnh AI kiểu tranh hoạt hoạ)

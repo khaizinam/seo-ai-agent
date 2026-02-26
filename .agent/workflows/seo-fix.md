@@ -33,5 +33,6 @@ description: Sửa và tối ưu bài viết theo chuẩn SEO và template HTML 
 - Xuất file `vi.txt` (HTML CKEditor hoàn chỉnh Tiếng Việt)
 - Xuất file `en.txt` (HTML CKEditor hoàn chỉnh Tiếng Anh)
 - Xuất file `social_content.txt` (Content FB/LinkedIn ngắn + hashtag + link)
+- Xuất file `image_prompt.txt` (Kịch bản tạo hình ảnh AI kiểu tranh vẽ hoạt hoạ)
 - Liệt kê các thay đổi đã thực hiện
 - Chạy checklist cuối cùng + Bilingual checklist
