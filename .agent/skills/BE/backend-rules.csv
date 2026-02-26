@@ -1,0 +1,42 @@
+Section,Category,Rule,Detail
+ARCHITECTURE,Pattern,Route Handler / Server Action → Service → Repository (Prisma),Handlers delegate to Services; Services handle logic; Repos handle DB via Prisma ORM
+ARCHITECTURE,Function Size,Max ~30 lines per function — split logic into private helpers,Easier to test and debug
+ARCHITECTURE,Single Responsibility,1 exported function = 1 Service method = 1 clear job,No god-functions
+ARCHITECTURE,DTO,Use DTO/serializer to map Prisma model to API response shape,Never expose raw Prisma model (may contain password hash etc.)
+ARCHITECTURE,File Location,Route Handlers in app/api/[resource]/route.ts — Server Actions in app/actions/[resource].ts,Next.js App Router conventions
+API RESPONSE,Mutation (POST/PUT/DELETE),"{ success: boolean, message: string, data: T | null }",Consistent mutation envelope
+API RESPONSE,Query (GET),"{ data: T[], meta: { pagination: { page, limit, total, pages } } }",Pagination inside meta.pagination
+API RESPONSE,Error,"{ success: false, message: string, errors?: Record<string,string> }",HTTP 4xx/5xx with detail
+API RESPONSE,Keys,camelCase for all fields; nest relations as objects (not _id),user: { id name avatar } not userId
+API RESPONSE,NextResponse,Use NextResponse.json() with explicit status for all route handlers,return NextResponse.json(payload, { status: 200 })
+ERROR HANDLING,Try-Catch,Wrap ALL Route Handler and Server Action bodies in try/catch,Return fail response on exception
+ERROR HANDLING,Fail Helper,"Use apiError(message, status) helper for consistent error response",Never throw unhandled errors in production
+ERROR HANDLING,Logging,"Log exceptions: console.error('[Module] action:', error)",Track errors — integrate with Sentry/Axiom in production
+ERROR HANDLING,User Message,Return user-friendly message; log technical detail server-side,Never expose stack trace to client
+DB QUERY,N+1 Prevention,Never query inside forEach/map loops — use Prisma include/select with where,Use findMany with include for relations
+DB QUERY,Selective Fields,"Always select specific fields in Prisma: select: { id: true, title: true, slug: true, thumb: true }",Save RAM and I/O
+DB QUERY,Heavy Columns,"Exclude content/description/longtext from list views — load only in detail/edit",select: { content: false } pattern
+DB QUERY,Pagination,"All list endpoints MUST use take/skip — max 20-50 items",Prevent full-table scan
+DB QUERY,Batch Ops,Use createMany() / updateMany() for bulk operations,No loop insert/update
+DB INDEX,Foreign Keys,"Every foreign key column (userId, storyId) MUST have @@index in Prisma schema",Migration requirement
+DB INDEX,Filters,"Columns in WHERE or ORDER BY frequently → add @@index",Composite index for common filter pairs
+DB INDEX,Migration,Add @@index(['userId']) or @@index(['status', 'createdAt']) in Prisma schema,Prisma Migrate pattern
+MEMORY,Release,Avoid holding large arrays in memory in batch jobs,Process and discard immediately
+MEMORY,Chunking,Process large datasets in chunks (500-1000 rows) using cursor-based pagination,Prevent memory crash
+MEMORY,Stream,Use Next.js Streaming (ReadableStream) for exports — do not load all into RAM,CSV/XLSX export pattern
+SECURITY,Input Validation,Validate ALL inputs with Zod before processing,import { z } from 'zod'
+SECURITY,SQL Injection,Use Prisma ORM parameterized queries — NEVER use $queryRaw with user input,Parameterized queries only
+SECURITY,XSS,Sanitize user-submitted HTML content before storage/output,Use DOMPurify or sanitize-html library
+SECURITY,Auth Guard,Verify JWT/session + role check on every protected route handler,Use middleware.ts or getServerSession(authOptions)
+SECURITY,Rate Limit,Apply rate limiting on login/register/sensitive endpoints,Use upstash/ratelimit or next-rate-limit
+SECURITY,CSRF,Next.js Server Actions have built-in CSRF protection — Route Handlers must verify Origin header,Check request headers on sensitive mutations
+DEBUG,Workflow,"1. Check server logs → 2. Reproduce with curl/Postman → 3. Add console.log to service → 4. Fix",Standard debug flow
+DEBUG,Query Log,Enable Prisma query logging in development: log: ['query'],Find slow/wrong queries
+DEBUG,Profiler,Use Next.js built-in profiler and React DevTools in development (not production),Check render times
+DEBUG,Recheck,After fix: test same endpoint + verify response format,Prevent regression
+OPTIMIZE,Cache,Cache frequent reads (settings/categories/rankings) with React cache() or unstable_cache,Reduce DB hits
+OPTIMIZE,Eager Load,Load relations in single Prisma query with include/select,Replace N+1 pattern
+OPTIMIZE,Queue,Offload heavy tasks (email/image processing) to background job (Inngest or Trigger.dev),Non-blocking response
+LOG,Format,"console.error/warn/info('[Module] Action:', detail)",Consistent log structure
+LOG,Levels,error (exceptions) / warn (edge cases) / info (audit trail),Use appropriate severity
+LOG,Production,Integrate Sentry or Axiom for production error tracking,Never rely on console only in prod

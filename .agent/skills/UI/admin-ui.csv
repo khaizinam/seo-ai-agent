@@ -1,0 +1,33 @@
+Category,Element,Rule/Class,Constraint
+Typography,Page Title,text-base font-black,No text-xl/2xl
+Typography,Section Header,text-sm font-bold uppercase,Include tracking-wider
+Typography,Main Text,text-xs (12px) / text-sm (14px),Standard for tables/forms
+Typography,Labels/Notes,text-xs,Minimum 12px (No smaller)
+Typography,Icons,text-xs / text-sm,12px-14px (No 10px)
+Spacing,Padding,p-3 / p-4,FORBIDDEN: p-6
+Spacing,Card Style,bg-slate-900/50 border border-slate-800,Rounded-xl
+Sizing,Controls,h-8,Strict height for Input/Button/Select
+Sizing,Input Padding,px-2 py-1,Compact fit
+Sizing,Buttons,px-3 text-xs font-bold h-8,Flex center with gap-1.5
+Table,Cell Spacing,px-3 py-1.5,High density (10-15 rows/screen)
+Table,Hover State,hover:bg-slate-800/50,Required for row tracking
+Table,User Column,w-7 h-7 avatar + text-xs,target="_blank" required
+Table,Story Column,w-8 h-11 thumb + truncate,target="_blank" required
+Table,Status Badge,text-xs px-2 py-0.5,rounded-full
+Logic,Filtering,AdminFilterHeader,Trigger on Filter button or Enter only
+Logic,Spam Control,No auto-fetch on keystroke,Manual trigger required
+Logic,Sorting,select h-8 text-xs,ASC/DESC options
+Red Flag,Forbidden 1,p-6 / gap-6,Too much white space
+Red Flag,Forbidden 2,h-10 / h-12,Breaks compact structure
+Red Flag,Forbidden 3,Shadows,Use border-slate-800 instead
+Component,List View,AdminTableUI + Pagination,Required for consistency
+Component,Search/Filter,AdminFilterHeader,Standardized search logic
+Component,Edit Form,AdminCardForm,Use Grid 2/3 + 1/3 (Content + Settings)
+Component,Buttons,ButtonUI (variants),Preferred over raw <button>
+Component,Confirm Dialog,ConfirmModal,Standard destructive prompt
+Input,Label Style,text-[10px] uppercase font-black text-gray-500,tracking-widest
+Input,Field Style,bg-gray-900 border-gray-700 text-sm,rounded-lg px-4 py-2.5
+Next.js Specific,'use client',Required on any component using useState / useEffect / event handlers,Keep server components where possible
+Next.js Specific,Image,Always use next/image — not <img> for content images,import Image from 'next/image'
+Next.js Specific,Link,Always use next/link — not <a href> for internal navigation,import Link from 'next/link'
+Next.js Specific,Font,Load fonts via next/font/google — not @import in CSS,Zero layout shift

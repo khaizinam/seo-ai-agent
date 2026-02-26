@@ -1,0 +1,19 @@
+Category,Rule,Details,Code/Tailwind
+Structure,Component Type,Default to Server Component — add 'use client' only when needed,"'use client' at top of file"
+Structure,Typing,Strict props interface — no implicit any,"interface Props { title: string; count?: number }"
+Structure,Logic,Reusable logic to custom hooks,hooks/ folder
+Structure,File Naming,PascalCase components / kebab-case files / camelCase hooks,UserTable.tsx / use-auth.ts
+Safety,Null Check,Use optional chaining and nullish coalescing for API data,"data?.user?.name ?? 'N/A'"
+Safety,Lists,Provide fallbacks for state,"const [list, setList] = useState(data ?? [])"
+Safety,Guards,Protect async renders with loading / error boundaries,"if (!isLoaded) return <Skeleton />"
+Media,Images,Use next/image with required width/height + onError fallback,"<Image src={src} onError={() => setSrc('/img/placeholder.png')} />"
+Media,Performance,Use next/dynamic for off-screen heavy components,"const Chart = dynamic(() => import('./Chart'), { ssr: false })"
+Admin UI,Main Text,Compact typography,text-xs
+Admin UI,Controls,Strict height for inputs/buttons,h-8
+Admin UI,Spacing,Tight padding (No p-6),p-3 or p-4
+Admin UI,Icons,Small scale icons,text-xs or text-[10px]
+Admin UI,Tables,External links for profiles/stories,target="_blank" rel="noopener noreferrer"
+State,Zustand,createStore with typed interface,"const useStore = create<StoreState>()((set) => ({ ... }))"
+State,Reactivity,Use selectors — never destructure entire store,const count = useStore((s) => s.count)
+Convention,Naming,Components: PascalCase / Files: kebab-case,UserTable.tsx
+Convention,Clean Code,No logs and verify types,next build

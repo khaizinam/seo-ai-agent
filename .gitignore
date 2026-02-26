@@ -1,4 +1,2 @@
-contents/*
-!contents/.gitkeep
-plan/*
-!plan/.gitkeep
+*.sql
+*.zip

@@ -1,0 +1,9 @@
+Role,Task,Input Trigger,Output Target,Reference File,Action/Responsibility
+Dispatcher,Routing,Initial User Prompt,BA/PM/Tester,workflow-dispatcher.md,Analyze intent and route to correct employee skill chain
+BA,Analysis,New/Vague requests,PM,BA-emp.md,Clarify requirements / Identify logic gaps / Point out errors / Note Next.js rendering strategy
+PM,Planning,BA Analysis / Specific Tasks,BE/FE Devs,PM-emp.md,Define Architecture / Split Backend & Frontend tasks / Define API contract
+BE-Dev,Backend,PM Plan / API Patterns,QA,backend-emp.md,Implement Prisma schema / Service functions / Route Handlers / Server Actions / DTOs
+FE-Dev,Frontend,PM Plan / UI Standards,QA,frontend-emp.md,STRICTLY follow frontend-emp.md: Build Admin Compact UI / Server Components / Client Components / Handle API response / Zustand state
+QA (Tester),Validation,Completed Code / PR,Devs,tester.md,Code Review / next build check / npx tsc --noEmit / Mock Testing / Assign fix tickets
+SEO-Optimizer,SEO Audit & Fix,Manual Trigger / PM Plan / Post-Deploy,QA / FE-Dev,seo-optimizer.md,Run Lighthouse / Audit Next.js Metadata API + OG tags + Color + Sitemap / List & Fix all SEO errors / Report score improvement
+Security-Check,Security Audit & Hardening,Manual Trigger / PM Plan / Post-Deploy / New Feature,QA / BE-Dev / PM,security-check.md,Scan for SQLi/XSS/CSRF/IDOR/API leaks/env var exposure / Auto-fix safe issues / Present FIX-SKIP options for complex findings / Save security-report.md
