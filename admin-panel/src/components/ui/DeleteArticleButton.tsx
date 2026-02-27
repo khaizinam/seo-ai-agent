@@ -3,11 +3,13 @@
 import React, { useState } from 'react';
 import { Button } from './Button';
 import { ConfirmModal } from './ConfirmModal';
+import { Modal } from '@/components/ui/Modal';
 import { useRouter } from 'next/navigation';
 
 export const DeleteArticleButton = ({ id, title, showIconOnly = false }: { id: string, title: string, showIconOnly?: boolean }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [errorModal, setErrorModal] = useState({ isOpen: false, message: '' });
   const router = useRouter();
 
   const handleDelete = async () => {
@@ -19,11 +21,11 @@ export const DeleteArticleButton = ({ id, title, showIconOnly = false }: { id: s
       if (res.ok) {
         router.refresh();
       } else {
-        alert('Có lỗi khi xoá bài viết');
+        setErrorModal({ isOpen: true, message: 'Có lỗi khi xoá bài viết' });
       }
     } catch (e) {
       console.error(e);
-      alert('Lỗi hệ thống khi xoá');
+      setErrorModal({ isOpen: true, message: 'Lỗi hệ thống khi xoá' });
     } finally {
       setIsDeleting(false);
       setIsOpen(false);
@@ -54,6 +56,15 @@ export const DeleteArticleButton = ({ id, title, showIconOnly = false }: { id: s
         message={`Are you sure you want to delete "${title}"? This action cannot be undone.`}
         isConfirming={isDeleting}
       />
+      
+      <Modal 
+        isOpen={errorModal.isOpen} 
+        onClose={() => setErrorModal({ isOpen: false, message: '' })}
+        title="Lỗi Cập Nhật"
+        footer={<Button variant="outline" size="sm" onClick={() => setErrorModal({ isOpen: false, message: '' })}>Đóng</Button>}
+      >
+        <p>{errorModal.message}</p>
+      </Modal>
     </>
   );
 };

@@ -31,6 +31,54 @@ model User {
   articles     Article[]
 }
 
+model Campaign {
+  id          String   @id @default(uuid())
+  name        String
+  mainKeyword String
+  status      String   @default("PLANNING") // PLANNING, RUNNING, COMPLETED
+  
+  // Strategy & Analysis (Storable as JSON)
+  // metadata includes: targets, industry, gender, subKeywords, weeklyTitles, imagePrompts, etc.
+  data        Json?    
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  articles    Article[]
+  posts       CampaignPost[]
+}
+
+model CampaignPost {
+  id          String   @id @default(uuid())
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  titleVi     String
+  titleEn     String?
+  intent      String?
+  week        Int      @default(1)
+  
+  isCreated   Boolean  @default(false)
+  articleId   String?  @unique
+  article     Article? @relation(fields: [articleId], references: [id], onDelete: SetNull)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AiAgent {
+  id        String   @id @default(uuid())
+  name      String
+  provider  String   // GEMINI, CLAUDE
+  model     String
+  apiKey    String
+  type      String   // Internal reference
+  status    Int      @default(0) // 1 = Active, 0 = Inactive
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Article {
   id            String        @id @default(uuid())
   slug          String        @unique
@@ -39,6 +87,11 @@ model Article {
   // Author
   authorId      String
   author        User          @relation(fields: [authorId], references: [id])
+  
+  // Campaign
+  campaignId    String?
+  campaign      Campaign?     @relation(fields: [campaignId], references: [id])
+  campaignPost  CampaignPost?
   
   // Vietnamese Content
   titleVi       String
