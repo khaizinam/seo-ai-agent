@@ -1,0 +1,78 @@
+# ── Dependencies ──────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ── Build outputs ─────────────────────────────────────
+dist/
+dist-electron/
+dist-release/
+out/
+
+# ── Electron build caches ─────────────────────────────
+.cache/
+*.snap
+
+# ── Environment variables ─────────────────────────────
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# ── Logs ─────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+
+# ── OS files ─────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V8
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ── Editor / IDE ──────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# ── TypeScript ────────────────────────────────────────
+*.tsbuildinfo
+
+# ── Test / coverage ───────────────────────────────────
+coverage/
+.nyc_output/
+
+# ── User data (thumbnails, DB data lưu local) ─────────
+resources/userdata/
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Sharp prebuilds (sẽ rebuild via postinstall) ───────
+node_modules/.cache/
+
+# ── Package lock (chọn 1 trong 2, nếu dùng npm giữ)  ──
+yarn.lock
+pnpm-lock.yaml
+# package-lock.json  ← giữ lại nếu dùng npm
+
+# ── Source maps (không cần trong repo) ────────────────
+dist-electron/*.map
+dist/*.map
+
+# ── Electron builder temp files ───────────────────────
+builder-debug.yml
+builder-effective-config.yaml

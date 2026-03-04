@@ -1,0 +1,60 @@
+appId: com.seogen.ai
+productName: SEOGEN AI
+copyright: Copyright © 2026 SEOGEN Team
+
+directories:
+  output: dist-release
+  buildResources: build-resources
+
+files:
+  - dist/**
+  - dist-electron/**
+  - "!node_modules"
+  - "!src"
+  - "!electron"
+
+extraResources:
+  - from: resources/
+    to: resources/
+    filter:
+      - "**/*"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build-resources/icon.ico
+  requestedExecutionLevel: asInvoker
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: SEOGEN AI
+  installerIcon: build-resources/installer.ico
+  uninstallerIcon: build-resources/uninstaller.ico
+  license: build-resources/license.txt
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: build-resources/icon.icns
+  category: public.app-category.productivity
+
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  icon: build-resources/icon.png
+  category: Productivity
+
+publish:
+  provider: github
+  owner: seogen
+  repo: seogen-ai
