@@ -1,9 +1,0 @@
-🇻🇳 TIẾNG VIỆT:
-• Tiêu đề: Chọn Ngôn Ngữ Coding Nâng Tầm SEO: Next.js & Nuxt.js với TypeScript - Tối Ưu Build Time, Bắt Lỗi AI Nhanh Chóng
-• Slug: chon-ngon-ngu-coding-nang-tam-seo-nextjs-nuxtjs-voi-typescript-toi-uu-build-time-bat-loi-ai-nhanh-chong
-• Meta Description: Khám phá cách Next.js và Nuxt.js kết hợp TypeScript tối ưu hóa quy trình phát triển web, bắt lỗi sớm và nâng cao hiệu suất SEO cho dự án của bạn.
-
-🇺🇸 ENGLISH:
-• Title: Choosing the Right Coding Language to Elevate SEO: Next.js & Nuxt.js with TypeScript
-• Slug: en/choosing-the-right-coding-language-to-elevate-seo-nextjs-nuxtjs-with-typescript
-• Meta Description: Discover how Next.js and Nuxt.js combined with TypeScript optimize your web development workflow, catch bugs early, and boost SEO performance for your projects.
