@@ -9,9 +9,10 @@ directories:
 files:
   - dist/**
   - dist-electron/**
-  - "!node_modules"
   - "!src"
   - "!electron"
+
+asar: true
 
 win:
   target:

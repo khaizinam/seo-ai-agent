@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Target, Users, FileText, Image, BarChart3,
   Settings, ChevronRight, Zap, Database, Globe, AlertTriangle, ImageDown
@@ -109,7 +109,7 @@ export default function App() {
   }, [theme])
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
         {/* Sidebar */}
         <aside style={{
@@ -225,6 +225,6 @@ export default function App() {
         </main>
       </div>
       <Toast />
-    </BrowserRouter>
+    </HashRouter>
   )
 }
