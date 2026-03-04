@@ -174,7 +174,7 @@ async function generateWithProvider(payload: AIGeneratePayload, config: AIConfig
     const res = await axios.post(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
       body,
-      { timeout: 60000 }
+      { timeout: 300000 }
     )
     return res.data.candidates?.[0]?.content?.parts?.[0]?.text || ''
   }
@@ -199,7 +199,7 @@ async function generateWithProvider(payload: AIGeneratePayload, config: AIConfig
           'anthropic-version': '2023-06-01',
           'content-type': 'application/json',
         },
-        timeout: 60000,
+        timeout: 300000,
       }
     )
     return res.data.content?.[0]?.text || ''
@@ -218,7 +218,7 @@ async function generateWithProvider(payload: AIGeneratePayload, config: AIConfig
       },
       {
         headers: { Authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-        timeout: 60000,
+        timeout: 300000,
       }
     )
     return res.data.choices?.[0]?.message?.content || ''

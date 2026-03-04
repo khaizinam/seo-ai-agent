@@ -213,13 +213,13 @@ Hãy chỉ trả về nội dung bên trong cặp thẻ <div>...</div>.`
       let rawResponse = ''
       if (provider === 'gemini') {
         const geminiBody = { contents: [{ role: 'user', parts: [{ text: prompt }] }] }
-        const res = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, geminiBody)
+        const res = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, geminiBody, { timeout: 300000 })
         rawResponse = res.data.candidates?.[0]?.content?.parts?.[0]?.text || ''
       } else if (provider === 'copilot') {
-        const res = await axios.post('https://api.openai.com/v1/chat/completions', { model, messages: [{ role: 'user', content: prompt }] }, { headers: { Authorization: `Bearer ${apiKey}` } })
+        const res = await axios.post('https://api.openai.com/v1/chat/completions', { model, messages: [{ role: 'user', content: prompt }] }, { headers: { Authorization: `Bearer ${apiKey}` }, timeout: 300000 })
         rawResponse = res.data.choices?.[0]?.message?.content || ''
       } else if (provider === 'claude') {
-        const res = await axios.post('https://api.anthropic.com/v1/messages', { model, max_tokens: 4096, messages: [{ role: 'user', content: prompt }] }, { headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' } })
+        const res = await axios.post('https://api.anthropic.com/v1/messages', { model, max_tokens: 4096, messages: [{ role: 'user', content: prompt }] }, { headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }, timeout: 300000 })
         rawResponse = res.data.content?.[0]?.text || ''
       }
 

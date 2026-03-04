@@ -9,8 +9,8 @@ interface AppStore {
   setIsGenerating: (v: boolean) => void
   theme: 'light' | 'dark' | 'auto'
   setTheme: (v: 'light' | 'dark' | 'auto') => void
-  toast: { message: string, type: 'success' | 'error' } | null
-  setToast: (toast: { message: string, type: 'success' | 'error' } | null) => void
+  toast: { message: string, type: 'success' | 'error' | 'info' } | null
+  setToast: (toast: { message: string, type: 'success' | 'error' | 'info' } | null) => void
 }
 
 export const useAppStore = create<AppStore>((set) => ({

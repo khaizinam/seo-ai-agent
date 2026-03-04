@@ -1,5 +1,5 @@
 import { useAppStore } from '../../stores/app.store'
-import { CheckCircle2, AlertCircle, X } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 export function Toast() {
@@ -16,9 +16,9 @@ export function Toast() {
 
   if (!toast) return null
 
-  const bg = toast.type === 'success' ? 'var(--success-bg, #065f46)' : 'var(--danger-bg, #991b1b)'
-  const border = toast.type === 'success' ? 'var(--success-border, #10b981)' : 'var(--danger-border, #ef4444)'
-  const Icon = toast.type === 'success' ? CheckCircle2 : AlertCircle
+  const bg = toast.type === 'success' ? 'var(--success-bg, #065f46)' : toast.type === 'info' ? 'var(--info-bg, #1e3a5f)' : 'var(--danger-bg, #991b1b)'
+  const border = toast.type === 'success' ? 'var(--success-border, #10b981)' : toast.type === 'info' ? 'var(--info-border, #3b82f6)' : 'var(--danger-border, #ef4444)'
+  const Icon = toast.type === 'success' ? CheckCircle2 : toast.type === 'info' ? Info : AlertCircle
 
   return (
     <div style={{
