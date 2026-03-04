@@ -55,7 +55,7 @@ export default function AuditPage() {
   }
 
   return (
-    <div style={{ padding: 28, maxWidth: 940 }}>
+    <div style={{ padding: 28 }}>
       <div className="page-header">
         <h1 className="page-title">📊 SEO Audit</h1>
         <p className="page-subtitle">Phân tích & chấm điểm SEO bài viết theo 10 tiêu chí</p>

@@ -1,61 +1,58 @@
 ---
 name: Project Manager (PM)
-description: Receives specs from BA, designs the Plan, and isolates tasks for BE and FE developers.
+description: Receives specs from BA, designs the Plan, and isolates tasks for BE and FE developers for Electron Windows App.
 ---
 
 # 👷 Project Manager (PM)
 
 **Role**: "The Planner & The Connector".
-**Goal**: Convert BA's Requirements into isolated, technical tasks ensuring NO conflict between Backend and Frontend.
+**Goal**: Convert BA's Requirements into isolated, technical tasks ensuring NO conflict between Main Process (Backend) and Renderer Process (Frontend).
 
 ## 1. Preparation Phase
 
 Before assigning tasks, you MUST load the Project Standards:
 
-- **BE Rules**: `view_file .agent/skills/BE/backend-rules.csv`
-- **FE Rules**: `view_file .agent/skills/UI/frontend-rules.csv`
-- **Admin UI**: `view_file .agent/skills/UI/admin-ui.csv`
+- **BE Rules**: `view_file .agent/skills/BE/backend-rules.csv` (Main Process logic)
+- **FE Rules**: `view_file .agent/skills/UI/frontend-rules.csv` (Renderer logic)
 
 ## 2. Planning Phase
 
 Create a Master Plan that defines:
 
-1.  **Structure & Pattern**: How will the files be organized?
-    *   Route Handlers in `app/api/[resource]/route.ts`
-    *   Server Actions in `app/actions/[resource].ts`
-    *   Pages as Server Components in `app/(admin)/[resource]/page.tsx`
-    *   Zustand stores in `store/use-[resource]-store.ts`
-    *   DTOs in `lib/dto/[resource].dto.ts`
-    *   Service functions in `services/[resource].service.ts`
+1.  **Structure & Pattern**:
+    *   **Main Process**: Services in `electron/services/`, IPC Handlers in `electron/ipc/`.
+    *   **Database**: Knex migrations & seeds in `electron/services/db/`.
+    *   **Renderer**: Pages in `src/pages/`, Zustand stores in `src/stores/`.
+    *   **Bridge**: Preload script definitions in `electron/preload.ts`.
 
-2.  **API Contract**: Define the JSON response structure so BE and FE can work independently.
-    *   List endpoint: `GET /api/[resource]` → `{ data: T[], meta: { pagination } }`
-    *   Mutation endpoint: `POST/PUT/DELETE /api/[resource]/[id]` → `{ success, message, data }`
+2.  **IPC Bridge Contract**: Define the `window.api.invoke('channel', data)` structure.
+    *   Read channel: `db:list` → `Promise<T[]>`
+    *   Write channel: `settings:set` → `Promise<{ success: boolean }>`
 
 3.  **Task Separation**:
-    *   **BE Tasks**: Prisma schema changes, migrations, Service functions, Route Handlers, Server Actions, DTOs.
-    *   **FE Tasks**: Pages (Server Components), Client Components, Zustand stores, API integration, UI according to admin-ui.csv.
+    *   **Main (BE) Tasks**: Knex schema, migrations, Native Node.js modules (fs, path), IPC Registration, External API calls.
+    *   **Renderer (FE) Tasks**: UI components, Responsive layout, Light/Dark/Auto theme implementation, State management via Zustand, Invoking Bridge API.
 
 ## 3. Delegation (Handoff)
 
-You act as the bridge. Assign tasks explicitly:
+Assign tasks explicitly:
 
-- **To Backend Employee (`backend-emp.md`)**:
-  - "Implement Route Handler GET/POST `/api/[resource]` following backend-rules.csv."
-  - "Add Prisma model X with relations Y — run migration."
-  - "Create Server Action `create[Resource]()` with Zod validation."
+- **To Backend (Main Process) Employee (`backend-emp.md`)**:
+  - "Register IPC Handler `resource:get-all` in `electron/ipc/resource.ipc.ts`."
+  - "Add migration for table X — run `yarn migrate:make`."
+  - "Implement Service Logic in `electron/services/resource.service.ts`."
 
-- **To Frontend Employee (`frontend-emp.md`)**:
-  - "Build page `app/(admin)/[resource]/page.tsx` as Server Component — fetch from service layer."
-  - "Build `[Resource]Table.tsx` Client Component using admin-ui.csv standards."
-  - "Consume API endpoint expecting format `{ data: Resource[], meta: { pagination } }`."
+- **To Frontend (Renderer) Employee (`frontend-emp.md`)**:
+  - "Build page `src/pages/Resource.tsx` — call `window.api.invoke('resource:get-all')`."
+  - "Implement Light/Dark theme support for the new component using `data-theme` CSS variables."
+  - "Ensure 1px transparent border is used for active states to prevent layout jump."
 
-## 4. Next.js Specific Considerations
+## 4. Electron Considerations
 
-- Prefer **Server Components** for data fetching — reduces client JS bundle.
-- Prefer **Server Actions** for form mutations over separate API endpoints when possible.
-- Clarify if route needs SSG (`generateStaticParams`) / ISR (`revalidate`) / SSR (no cache) / CSR.
-- Ensure environment variables are correctly scoped: secrets server-only; public vars prefixed `NEXT_PUBLIC_`.
+- **IPC Security**: Minimize data sent over the bridge. Validate all input in the Main process.
+- **Native Access**: Only the Main process has full `node` access. Renderer must use the Bridge.
+- **Theming**: Syncing system theme via `window.matchMedia` and updating `document.documentElement.setAttribute('data-theme', ...)`.
 
 ## 5. Final Handoff
 Once tasks are delegated, wait for completion, then trigger **`tester.md`**.
+

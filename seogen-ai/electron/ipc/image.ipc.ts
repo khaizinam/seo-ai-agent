@@ -128,4 +128,105 @@ export function registerImageIpc(store: Store) {
       return { success: false, error: error.message }
     }
   })
+
+  // Get metadata from buffer
+  ipcMain.handle('image:metadataFromBuffer', async (_e, base64: string) => {
+    try {
+      const buffer = Buffer.from(base64, 'base64')
+      const meta = await sharp(buffer).metadata()
+      return { success: true, width: meta.width, height: meta.height, format: meta.format, size: buffer.length }
+    } catch (err: unknown) {
+      const error = err as Error
+      return { success: false, error: error.message }
+    }
+  })
+
+  // Convert image: resize + format + quality
+  ipcMain.handle('image:convert', async (_e, payload: {
+    base64: string;
+    width: number;
+    format: 'webp' | 'jpg';
+    quality: number;
+    compress: boolean;
+  }) => {
+    try {
+      const inputBuffer = Buffer.from(payload.base64, 'base64')
+      let pipeline = sharp(inputBuffer).resize({ width: payload.width, withoutEnlargement: true })
+
+      if (payload.format === 'webp') {
+        pipeline = pipeline.webp({
+          quality: payload.quality,
+          effort: payload.compress ? 6 : 4,
+        })
+      } else {
+        pipeline = pipeline.jpeg({
+          quality: payload.quality,
+          mozjpeg: payload.compress,
+        })
+      }
+
+      const outputBuffer = await pipeline.toBuffer()
+      const meta = await sharp(outputBuffer).metadata()
+
+      return {
+        success: true,
+        base64: outputBuffer.toString('base64'),
+        size: outputBuffer.length,
+        width: meta.width,
+        height: meta.height,
+        format: payload.format,
+      }
+    } catch (err: unknown) {
+      const error = err as Error
+      return { success: false, error: error.message }
+    }
+  })
+
+  // Save processed buffer to user-chosen location
+  ipcMain.handle('image:saveConverted', async (_e, payload: { base64: string; defaultName: string }) => {
+    try {
+      const ext = payload.defaultName.split('.').pop() || 'jpg'
+      const result = await dialog.showSaveDialog({
+        title: 'Lưu ảnh đã xử lý',
+        defaultPath: payload.defaultName,
+        filters: [
+          { name: 'Image', extensions: [ext] },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+      })
+      if (result.canceled || !result.filePath) return { success: false, error: 'Hủy lưu' }
+
+      const buffer = Buffer.from(payload.base64, 'base64')
+      const fs = await import('fs/promises')
+      await fs.writeFile(result.filePath, buffer)
+
+      return { success: true, path: result.filePath }
+    } catch (err: unknown) {
+      const error = err as Error
+      return { success: false, error: error.message }
+    }
+  })
+
+  // Pick multiple image files
+  ipcMain.handle('image:pickFiles', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Chọn ảnh để chuyển đổi',
+      filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png'] }],
+      properties: ['openFile', 'multiSelections'],
+    })
+    if (result.canceled || !result.filePaths.length) return null
+    return result.filePaths
+  })
+
+  // Read file to base64
+  ipcMain.handle('image:readFileBase64', async (_e, filePath: string) => {
+    try {
+      const fs = await import('fs/promises')
+      const buffer = await fs.readFile(filePath)
+      return { success: true, base64: buffer.toString('base64'), name: require('path').basename(filePath) }
+    } catch (err: unknown) {
+      const error = err as Error
+      return { success: false, error: error.message }
+    }
+  })
 }

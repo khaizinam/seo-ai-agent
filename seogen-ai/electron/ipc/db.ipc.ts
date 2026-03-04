@@ -35,4 +35,10 @@ export function registerDbIpc(store: Store) {
     if (!config) return { success: false, message: 'Chưa có cấu hình DB' }
     return await connectDB(config)
   })
+
+  // Full reset (Drop & Migrate)
+  ipcMain.handle('db:reset', async () => {
+    const { resetDB } = await import('../services/db/knex.service')
+    return await resetDB(store)
+  })
 }

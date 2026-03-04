@@ -10,6 +10,7 @@ import { registerArticleIpc } from './ipc/article.ipc'
 import { registerImageIpc } from './ipc/image.ipc'
 import { registerAuditIpc } from './ipc/audit.ipc'
 import { registerSettingsIpc } from './ipc/settings.ipc'
+import { connectDB, runMigrations, DBConfig } from './services/db/knex.service'
 
 const store = new Store()
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
@@ -45,7 +46,7 @@ function createWindow() {
   // Load app
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173')
-    mainWindow.webContents.openDevTools()
+    // mainWindow.webContents.openDevTools() // Commented out per user request
   } else {
     mainWindow.loadFile(join(__dirname, '../dist/index.html'))
   }
@@ -76,16 +77,33 @@ function createWindow() {
 function registerAllIpc() {
   registerDbIpc(store)
   registerAiIpc(store)
-  registerCampaignIpc()
-  registerArticleIpc()
+  registerCampaignIpc(store)
+  registerArticleIpc(store)
   registerImageIpc(store)
   registerAuditIpc()
   registerSettingsIpc(store)
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createWindow()
   registerAllIpc()
+
+  // Auto-connect database if config exists
+  const dbConfig = store.get('dbConfig') as DBConfig | undefined
+  if (dbConfig) {
+    try {
+      console.log('Auto-connecting to database...')
+      const result = await connectDB(dbConfig) // Corrected to use connectDB
+      if (result.success) {
+        await runMigrations(store)
+        console.log('Database connected and migrated.')
+      } else {
+        console.error('Auto-connect failed:', result.message)
+      }
+    } catch (err) {
+      console.error('Failed to auto-connect DB:', err)
+    }
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

@@ -2,6 +2,16 @@ import { ipcMain, BrowserWindow } from 'electron'
 import Store from 'electron-store'
 import axios from 'axios'
 
+interface AIProfile {
+  id: string
+  name: string
+  provider: 'gemini' | 'claude' | 'copilot'
+  apiKey: string
+  model: string
+  active: boolean
+  baseUrl?: string
+}
+
 interface AIConfig {
   geminiKey?: string
   geminiModel?: string
@@ -11,6 +21,7 @@ interface AIConfig {
   copilotModel?: string
   defaultProvider?: 'gemini' | 'claude' | 'copilot'
   nanoBananaKey?: string
+  profiles?: AIProfile[]
 }
 
 interface AIGeneratePayload {
@@ -124,12 +135,31 @@ Chỉ trả về JSON thuần, không markdown:
 }
 
 async function generateWithProvider(payload: AIGeneratePayload, config: AIConfig): Promise<string> {
-  const provider = payload.provider
+  let provider = payload.provider
   const messages = payload.messages
+  let apiKey: string | undefined
+  let model: string | undefined
+
+  // Check if we have active profile in new structure
+  const activeProfile = config.profiles?.find(p => p.active)
+  if (activeProfile && !payload.provider) {
+    // If no specific provider requested, use the active profile
+    provider = activeProfile.provider
+    apiKey = activeProfile.apiKey
+    model = payload.model || activeProfile.model
+  } else if (activeProfile && payload.provider === activeProfile.provider) {
+    // If requested provider matches active profile, use profile's key/model
+    apiKey = activeProfile.apiKey
+    model = payload.model || activeProfile.model
+  }
+
+  if (!provider) {
+    throw new Error('No AI provider specified or active profile found.')
+  }
 
   if (provider === 'gemini') {
-    const key = config.geminiKey
-    const model = payload.model || config.geminiModel || 'gemini-2.0-flash'
+    const key = apiKey || config.geminiKey
+    const actualModel = model || payload.model || config.geminiModel || 'gemini-2.0-flash'
     const geminiMessages = messages.map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
@@ -150,8 +180,8 @@ async function generateWithProvider(payload: AIGeneratePayload, config: AIConfig
   }
 
   if (provider === 'claude') {
-    const key = config.claudeKey
-    const model = payload.model || config.claudeModel || 'claude-3-5-sonnet-20241022'
+    const key = apiKey || config.claudeKey
+    const actualModel = model || payload.model || config.claudeModel || 'claude-3-5-sonnet-20241022'
     const systemMsg = messages.find(m => m.role === 'system')
     const res = await axios.post(
       'https://api.anthropic.com/v1/messages',
@@ -176,12 +206,12 @@ async function generateWithProvider(payload: AIGeneratePayload, config: AIConfig
   }
 
   if (provider === 'copilot') {
-    const key = config.copilotKey
-    const model = payload.model || config.copilotModel || 'gpt-4o'
+    const key = apiKey || config.copilotKey
+    const actualModel = model || payload.model || config.copilotModel || 'gpt-4o'
     const res = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
-        model,
+        model: actualModel,
         messages,
         max_tokens: payload.maxTokens || 4096,
         temperature: payload.temperature || 0.7,

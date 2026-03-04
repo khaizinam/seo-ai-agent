@@ -10,8 +10,6 @@ export default function ThumbnailPage() {
   const [customPrompt, setCustomPrompt] = useState('')
   const [generating, setGenerating] = useState(false)
   const [result, setResult] = useState<{ path?: string; error?: string } | null>(null)
-  const [processing, setProcessing] = useState(false)
-  const [processResult, setProcessResult] = useState<{ path?: string; error?: string } | null>(null)
   const [newName, setNewName] = useState(''); const [newTemplate, setNewTemplate] = useState(''); const [newStyle, setNewStyle] = useState('')
   const [showAdd, setShowAdd] = useState(false)
 
@@ -27,15 +25,6 @@ export default function ThumbnailPage() {
     setGenerating(false)
   }
 
-  async function pickAndProcess() {
-    const path = await invoke<string | null>('image:pickFile')
-    if (!path) return
-    setProcessing(true); setProcessResult(null)
-    const res = await invoke<{ success: boolean; path?: string; error?: string }>('image:process', path)
-    setProcessResult(res.success ? { path: res.path } : { error: res.error })
-    setProcessing(false)
-  }
-
   async function addPrompt() {
     if (!newName.trim() || !newTemplate.trim()) return
     await invoke('thumbPrompt:create', { name: newName, prompt_template: newTemplate, style: newStyle })
@@ -43,7 +32,7 @@ export default function ThumbnailPage() {
   }
 
   return (
-    <div style={{ padding: 28, maxWidth: 940 }}>
+    <div style={{ padding: 28 }}>
       <div className="page-header">
         <h1 className="page-title">🖼️ Thumbnail AI</h1>
         <p className="page-subtitle">Tạo thumbnail bằng Nano Banana API · Tự động resize 800px · PNG→JPG · Compress</p>
@@ -93,22 +82,6 @@ export default function ThumbnailPage() {
 
             <button className="btn-primary" onClick={generate} disabled={generating || (!customPrompt && !selectedPrompt)} style={{ width: '100%', justifyContent: 'center' }}>
               {generating ? <><Loader2 size={14} className="animate-spin" /> Đang tạo ảnh...</> : <><Wand2 size={14} /> Generate Thumbnail</>}
-            </button>
-          </div>
-
-          {/* Process existing image */}
-          <div className="glass-card" style={{ padding: 20 }}>
-            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 12 }}>⚙️ Xử lý ảnh có sẵn</div>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>
-              Chọn ảnh PNG/JPG → tự động chuyển JPG + resize 800px + compress
-            </p>
-            {processResult?.path && (
-              <div style={{ marginBottom: 12, padding: 8, background: 'rgba(16,185,129,0.08)', borderRadius: 8, fontSize: 12, color: '#10b981' }}>
-                ✅ Đã xử lý: <span style={{ fontFamily: 'monospace', fontSize: 10 }}>{processResult.path}</span>
-              </div>
-            )}
-            <button className="btn-secondary" onClick={pickAndProcess} disabled={processing} style={{ width: '100%', justifyContent: 'center' }}>
-              {processing ? <><Loader2 size={13} className="animate-spin" /> Đang xử lý...</> : <><Upload size={13} /> Chọn ảnh & xử lý</>}
             </button>
           </div>
         </div>

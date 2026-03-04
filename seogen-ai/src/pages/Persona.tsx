@@ -44,7 +44,7 @@ export default function PersonaPage() {
   }
 
   return (
-    <div style={{ padding: 28, maxWidth: 900 }}>
+    <div style={{ padding: 28 }}>
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div><h1 className="page-title">👤 Nhân vật viết bài</h1><p className="page-subtitle">Tạo & quản lý giọng văn, phong cách viết</p></div>
         <button className="btn-primary" onClick={() => setEditing({})}><Plus size={14} /> Tạo nhân vật</button>

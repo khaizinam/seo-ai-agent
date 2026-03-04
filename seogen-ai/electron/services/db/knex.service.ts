@@ -62,17 +62,37 @@ export async function runMigrations(store: Store): Promise<void> {
   if (!config) return
 
   const knex = getKnex()
-  await knex.schema
-    // campaigns
-    .createTableIfNotExists('campaigns', (t) => {
+
+  // campaigns
+  if (!(await knex.schema.hasTable('campaigns'))) {
+    await knex.schema.createTable('campaigns', (t) => {
       t.increments('id').primary()
       t.string('name', 255).notNullable()
       t.text('description')
       t.enum('status', ['active', 'paused', 'done']).defaultTo('active')
+      t.enum('duration_type', ['weeks', 'months']).defaultTo('weeks')
+      t.integer('duration_value').defaultTo(4)
+      t.integer('articles_per_week').defaultTo(4)
       t.timestamps(true, true)
     })
-    // keywords
-    .createTableIfNotExists('keywords', (t) => {
+  } else {
+    // Check missing columns
+    if (!(await knex.schema.hasColumn('campaigns', 'duration_type'))) {
+      await knex.schema.table('campaigns', t => {
+        t.enum('duration_type', ['weeks', 'months']).defaultTo('weeks')
+        t.integer('duration_value').defaultTo(4)
+      })
+    }
+    if (!(await knex.schema.hasColumn('campaigns', 'articles_per_week'))) {
+      await knex.schema.table('campaigns', t => {
+        t.integer('articles_per_week').defaultTo(4)
+      })
+    }
+  }
+
+  // keywords
+  if (!(await knex.schema.hasTable('keywords'))) {
+    await knex.schema.createTable('keywords', (t) => {
       t.increments('id').primary()
       t.integer('campaign_id').unsigned().references('id').inTable('campaigns').onDelete('CASCADE')
       t.string('keyword', 500).notNullable()
@@ -82,8 +102,11 @@ export async function runMigrations(store: Store): Promise<void> {
       t.enum('status', ['pending', 'in_progress', 'done']).defaultTo('pending')
       t.timestamps(true, true)
     })
-    // personas
-    .createTableIfNotExists('personas', (t) => {
+  }
+
+  // personas
+  if (!(await knex.schema.hasTable('personas'))) {
+    await knex.schema.createTable('personas', (t) => {
       t.increments('id').primary()
       t.string('name', 255).notNullable()
       t.text('description')
@@ -93,8 +116,11 @@ export async function runMigrations(store: Store): Promise<void> {
       t.text('prompt_template')
       t.timestamps(true, true)
     })
-    // articles
-    .createTableIfNotExists('articles', (t) => {
+  }
+
+  // articles
+  if (!(await knex.schema.hasTable('articles'))) {
+    await knex.schema.createTable('articles', (t) => {
       t.increments('id').primary()
       t.integer('keyword_id').unsigned().references('id').inTable('keywords').onDelete('SET NULL').nullable()
       t.integer('persona_id').unsigned().references('id').inTable('personas').onDelete('SET NULL').nullable()
@@ -110,18 +136,54 @@ export async function runMigrations(store: Store): Promise<void> {
       t.enum('status', ['draft', 'reviewed', 'published']).defaultTo('draft')
       t.string('thumbnail_path', 500)
       t.string('thumbnail_url', 500)
+      t.enum('article_type', ['pillar', 'satellite']).defaultTo('satellite')
+      t.integer('campaign_id').unsigned().references('id').inTable('campaigns').onDelete('CASCADE').nullable()
+      t.integer('week_number').defaultTo(1)
+      t.string('keyword', 500)
+      t.text('content_social')
+      t.text('thumbnail_prompt')
       t.timestamps(true, true)
     })
-    // thumbnail_prompts
-    .createTableIfNotExists('thumbnail_prompts', (t) => {
+  } else {
+    // Check missing columns
+    if (!(await knex.schema.hasColumn('articles', 'campaign_id'))) {
+      await knex.schema.table('articles', t => {
+        t.enum('article_type', ['pillar', 'satellite']).defaultTo('satellite')
+        t.integer('campaign_id').unsigned().references('id').inTable('campaigns').onDelete('CASCADE').nullable()
+        t.integer('week_number').defaultTo(1)
+      })
+    }
+    if (!(await knex.schema.hasColumn('articles', 'keyword'))) {
+      await knex.schema.table('articles', t => {
+        t.string('keyword', 500)
+      })
+    }
+    if (!(await knex.schema.hasColumn('articles', 'content_social'))) {
+      await knex.schema.table('articles', t => {
+        t.text('content_social')
+      })
+    }
+    if (!(await knex.schema.hasColumn('articles', 'thumbnail_prompt'))) {
+      await knex.schema.table('articles', t => {
+        t.text('thumbnail_prompt')
+      })
+    }
+  }
+
+  // thumbnail_prompts
+  if (!(await knex.schema.hasTable('thumbnail_prompts'))) {
+    await knex.schema.createTable('thumbnail_prompts', (t) => {
       t.increments('id').primary()
       t.string('name', 255).notNullable()
       t.text('prompt_template')
       t.string('style', 100)
       t.timestamps(true, true)
     })
-    // seo_audits
-    .createTableIfNotExists('seo_audits', (t) => {
+  }
+
+  // seo_audits
+  if (!(await knex.schema.hasTable('seo_audits'))) {
+    await knex.schema.createTable('seo_audits', (t) => {
       t.increments('id').primary()
       t.integer('article_id').unsigned().references('id').inTable('articles').onDelete('CASCADE')
       t.integer('score').defaultTo(0)
@@ -129,4 +191,35 @@ export async function runMigrations(store: Store): Promise<void> {
       t.json('suggestions')
       t.timestamp('audited_at').defaultTo(knex.fn.now())
     })
+  }
+}
+
+export async function resetDB(store: Store): Promise<{ success: boolean; message: string }> {
+  try {
+    const knex = getKnex()
+    
+    // Disable foreign key checks for dropping
+    if (knex.client.config.client === 'mysql2' || knex.client.config.client === 'mysql') {
+      await knex.raw('SET FOREIGN_KEY_CHECKS = 0')
+    } else if (knex.client.config.client === 'pg') {
+      // In PG we can use DROP TABLE ... CASCADE or just drop in order
+    }
+
+    const tables = ['seo_audits', 'articles', 'keywords', 'campaigns', 'personas', 'thumbnail_prompts']
+    for (const table of tables) {
+      await knex.schema.dropTableIfExists(table)
+    }
+
+    if (knex.client.config.client === 'mysql2' || knex.client.config.client === 'mysql') {
+      await knex.raw('SET FOREIGN_KEY_CHECKS = 1')
+    }
+
+    // Run migrations again
+    await runMigrations(store)
+
+    return { success: true, message: 'Đã xóa toàn bộ dữ liệu và cấu hình lại database!' }
+  } catch (err: unknown) {
+    const error = err as Error
+    return { success: false, message: 'Lỗi reset DB: ' + error.message }
+  }
 }

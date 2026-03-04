@@ -76,3 +76,5 @@ dist/*.map
 # ── Electron builder temp files ───────────────────────
 builder-debug.yml
 builder-effective-config.yaml
+yarn.lock
+package-lock.json

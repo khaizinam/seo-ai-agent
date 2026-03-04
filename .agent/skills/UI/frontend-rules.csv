@@ -1,43 +1,29 @@
 Section,Category,Rule,Detail
-LAYOUT,Wrapper,h-screen overflow-hidden bg-[#0f172a],Fixed height + internal scroll
-LAYOUT,Header,h-11 bg-[#1e293b] border-b border-gray-800,Compact top bar
-LAYOUT,Sidebar,w-64 bg-[#1e293b] Desktop / MobileSidebar on mobile,Responsive sidebar toggle
-LAYOUT,Content,p-2 md:p-4 gap-4 flex flex-col,Standard main area spacing
-LAYOUT,Dark Theme,bg-[#0f172a] (app) | bg-[#1e293b] (card/header),Mandatory dark palette
-COMPONENT,Typing,Strict props interface + React.FC or arrow function with typed props,interface ButtonProps { label: string; onClick: () => void }
-COMPONENT,Naming,PascalCase components / kebab-case files,UserTable.tsx
-COMPONENT,Reuse,Extract shared logic to custom hooks,hooks/ folder
-COMPONENT,Server/Client,Mark interactive components with 'use client' — keep server components by default,Minimize client bundle
-COMPONENT,Badges,UserBadgeCol / StoryBadgeCol / ChapterBadgeCol,Standard entity display
-COMPONENT,Buttons,ButtonUI (primary/info/warning) + ActionButton,No raw <button>
-COMPONENT,Confirm,ConfirmModal for delete/restore/critical ops,FORBIDDEN: window.alert() / window.confirm()
-COMPONENT,Toast,ToastNotification / useToast() for quick feedback,Success for actions / Error for API failures
-CRUD LIST,Filter,AdminFilterHeader (search + filter selects + Create btn),Manual trigger only (No auto-fetch on keystroke)
-CRUD LIST,Table,AdminTableUI + Pagination (Top AND Bottom),Required for all list views
-CRUD LIST,Columns,ID (#) | Data (Badge) | Status (Badge) | Action,Standard table structure
-CRUD LIST,Hover,hover:bg-slate-800/50 on all table rows,Row tracking feedback
-CRUD EDIT,Layout,AdminCardForm: Grid 2/3 main + 1/3 sidebar,Content + Settings panel
-CRUD EDIT,Actions,"Save (stay) AND Save & Exit (back) buttons",Dual-action pattern
-STATE,Zustand,createStore with typed state + actions,import { create } from 'zustand'
-STATE,Reactivity,Never mutate state directly — use set() updater,Immutable updates
-STATE,Persist,Save filters/pagination limit in localStorage via zustand/middleware,Keep user context on refresh
-API,Client,Use @/lib/api (Not raw fetch/axios),Centralized interceptors + error handling
-API,Safety,optional chaining (?.) for deep access + fallback images for avatars,Prevent UI crashes
-API,Error Handling,try/catch + toast.error(err.message),Show specific API errors
-API,Response,Validate: { success data meta: { pagination } },Standard structure
-API,Empty State,Show empty-message component when list is empty,Never show blank page
-API,Server Actions,Use Next.js Server Actions for mutations where possible,Reduce client bundle
-API,Route Handlers,Place API routes in app/api/[route]/route.ts following REST conventions,GET/POST/PUT/DELETE
-TYPING,TypeScript,Define Interface for every API response and entity,interface User { id: number }
-TYPING,Enums,Use @/lib/enums.ts for all fixed types/options,No magic strings
-TYPING,Check,Run npx tsc --noEmit before commit,Type integrity gate
-TYPING,Zod,Use Zod for runtime validation on forms and API inputs,import { z } from 'zod'
-UTILS,Common,@/lib/utils.ts for shared functions (format/helpers),Pure functions preferred
-UTILS,Images,Use next/image with onError fallback,Mandatory fallback
-UTILS,Lazy,Use next/dynamic for heavy off-screen components,Performance standard
-OPTIMIZE,Loading,Apply loading state on buttons / Skeleton for lists,Disable button during process
-OPTIMIZE,Transitions,Framer Motion or CSS transition classes for pages and modals,Smooth UX
-OPTIMIZE,Render,Conditional rendering: short-circuit && for frequent toggles / lazy dynamic for heavy components,Reduce re-renders
-OPTIMIZE,Cleanup,Remove unused variables/components/console.log,No logs in production
-OPTIMIZE,Build,next build must pass with zero errors and warnings,Final quality gate
-OPTIMIZE,Image,Use next/image with width/height props — never raw <img> for app images,Automatic optimization
+LAYOUT,Theming,Use data-theme='light' | 'dark' on html element,Supports Light/Dark/Auto modes
+LAYOUT,Variables,Use --surface-0 --text-primary etc.,CSS variables defined in index.css
+LAYOUT,Sidebar,w-64 flex flex-col bg-linear gradient,Glassmorphism with distinct active state
+LAYOUT,Active Item,1px transparent border by default -> color on active,Prevent layout jump (1px shift)
+LAYOUT,Transition,all 0.4s cubic-bezier(0.4 0 0.2 1),Smooth Sidebar and Page transitions
+COMPONENT,Typing,Strict props interface + React.FC,Focus on TypeScript integrity
+COMPONENT,Naming,PascalCase components / kebab-case files,Settings.tsx or CampaignPage.tsx
+COMPONENT,Reuse,Extract IPC logic to @/lib/api.ts,Centralized window.api calls
+COMPONENT,Popups,Custom Lucide-based Modals / SetupPrompt,FORBIDDEN: window.alert() / window.confirm()
+COMPONENT,Icons,Lucide-React with consistent strokeWidth,Standardize icon appearance
+COMPONENT,Theming,Support Light/Dark for all custom components,Check contrast in both modes
+CRUD LIST,Table,Compact rows with hover:bg-surface-2,Admin-style data density
+CRUD LIST,Status,Database status badge in Sidebar,Real-time connectivity feedback
+CRUD EDIT,Theming,Toggle buttons for Theme (Sun/Moon/Monitor),Visual feedback for active theme
+STATE,Zustand,Zustand for UI persistence + IPC data caching,Reactive state management
+STATE,Hydration,Load theme & DB status from IPC on app startup,Sync Main process state to Renderer
+API,Bridge,ONLY Use window.api.invoke() for Main process talk,Context isolation requirement
+API,Safety,Await IPC results + try/catch wrapped in handlers,Standard async error handling
+API,Channels,Use namespace:action naming for IPC channels,Example: db:connect | ai:save-config
+API,Masking,API keys should be masked in UI before display,Safety: store real keys in raw state
+TYPING,TypeScript,Define Interface for every IPC response,interface DBConfig { host: string }
+TYPING,Check,Run npx tsc before code completion,Type integrity gate
+UTILS,Common,@/lib/utils.ts for tailwind-merge and formatters,Pure utility functions
+UTILS,Theming,matchMedia('(prefers-color-scheme: dark)') for Auto mode,Sync with system appearance
+OPTIMIZE,Transitions,FadeIn animation for all page transitions,Premium feel (0.4s duration)
+OPTIMIZE,Layout,Always keep border width constant (1px),Avoid "shaky" UI on hover
+OPTIMIZE,Cleanup,Remove console.log before task completion,Clean production output
+OPTIMIZE,Build,yarn build must pass with zero issues,Final quality gate
