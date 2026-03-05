@@ -3,7 +3,7 @@
 <div align="center">
   <a href="README.md">Trang chủ (README)</a> &nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="FEATURE.md">Tính năng (Features)</a> &nbsp;&nbsp;|&nbsp;&nbsp;
-  <b>Lịch sử Cập nhật (Changelog)</b>
+  <b>Lịch sử Cập nhật (Changelog)</b> &nbsp;&nbsp;|&nbsp;&nbsp;
 </div>
 <br/>
 
