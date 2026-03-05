@@ -133,9 +133,8 @@ export default function App() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 0 20px rgba(99,102,241,0.4)',
                 overflow: 'hidden',
-                background: 'white'
               }}>
-                <img src={logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               </div>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.3px', color: 'var(--text-primary)' }}>

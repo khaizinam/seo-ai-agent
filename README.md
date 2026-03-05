@@ -43,6 +43,32 @@ SEOGEN AI tích hợp đa dạng các nhà cung cấp AI hàng đầu để bạ
 
 ---
 
+## 📸 Hình ảnh Minh họa (Screenshots)
+
+<div align="center">
+  <img src="doc/scrennshot_1.webp" alt="SEOGEN AI Dashboard" width="600px" />
+  <br/>
+  <i>Giao diện chính và tổng quan dự án</i>
+  <br/><br/>
+  <img src="doc/scrennshot_2.webp" alt="Persona Management" width="600px" />
+  <br/>
+  <i>Quản lý Nhân vật (Persona) chuyên sâu</i>
+  <br/><br/>
+  <img src="doc/scrennshot_3.webp" alt="Article Generator" width="600px" />
+  <br/>
+  <i>Công cụ sinh bài viết AI chuẩn SEO</i>
+  <br/><br/>
+  <img src="doc/scrennshot_4.webp" alt="Content Editor" width="600px" />
+  <br/>
+  <i>Trình soạn thảo và tối ưu nội dung</i>
+  <br/><br/>
+  <img src="doc/scrennshot_5.webp" alt="Campaign Management" width="600px" />
+  <br/>
+  <i>Quản lý Chiến dịch và Từ khóa</i>
+</div>
+
+---
+
 ## 💻 Hướng dẫn Cài đặt & Phát triển
 
 ### Yêu cầu hệ thống
