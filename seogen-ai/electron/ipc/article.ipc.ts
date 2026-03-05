@@ -1,6 +1,9 @@
-import { ipcMain } from 'electron'
+import { ipcMain, app } from 'electron'
 import Store from 'electron-store'
 import axios from 'axios'
+import { join } from 'path'
+import { existsSync } from 'fs'
+import { readdir, unlink } from 'fs/promises'
 import { getKnex } from '../services/db/knex.service'
 import { buildFullArticlePrompt } from '../lib/prompts'
 import { DEFAULT_PERSONAS } from '../lib/persona-seeds'
@@ -105,6 +108,23 @@ export function registerArticleIpc(store: Store) {
   ipcMain.handle('article:delete', async (_e, id: number) => {
     const db = getKnex()
     await db('articles').where({ id }).delete()
+    
+    // Clean up associated generated thumbnail images
+    try {
+      const thumbDir = join(app.getPath('userData'), 'thumbnails')
+      if (existsSync(thumbDir)) {
+        const files = await readdir(thumbDir)
+        const suffix = `_${id}.jpg`
+        for (const file of files) {
+          if (file.endsWith(suffix) && file.startsWith('thumb_')) {
+            await unlink(join(thumbDir, file)).catch(() => {})
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Lỗi khi xoá ảnh thumbnail:', e)
+    }
+
     return { success: true }
   })
 

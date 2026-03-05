@@ -10,6 +10,7 @@ import { registerArticleIpc } from './ipc/article.ipc'
 import { registerImageIpc } from './ipc/image.ipc'
 import { registerAuditIpc } from './ipc/audit.ipc'
 import { registerSettingsIpc } from './ipc/settings.ipc'
+import { registerWebhookIPC } from './ipc/webhook.ipc'
 import { connectDB, runMigrations, DBConfig } from './services/db/knex.service'
 
 const store = new Store()
@@ -24,7 +25,7 @@ function createWindow() {
     minWidth: 1024,
     minHeight: 700,
     title: 'SEOGEN AI',
-    // icon: join(__dirname, '../build-resources/icon.ico'),
+    icon: join(__dirname, '../build-resources/icon.png'),
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -82,6 +83,7 @@ function registerAllIpc() {
   registerImageIpc(store)
   registerAuditIpc()
   registerSettingsIpc(store)
+  registerWebhookIPC()
 }
 
 app.whenReady().then(async () => {

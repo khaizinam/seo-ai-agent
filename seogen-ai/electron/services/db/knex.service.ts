@@ -192,6 +192,21 @@ export async function runMigrations(store: Store): Promise<void> {
       t.timestamp('audited_at').defaultTo(knex.fn.now())
     })
   }
+
+  // webhooks
+  if (!(await knex.schema.hasTable('webhooks'))) {
+    await knex.schema.createTable('webhooks', (t) => {
+      t.increments('id').primary()
+      t.string('name', 255).notNullable()
+      t.string('endpoint_url', 1000).notNullable()
+      t.enum('method', ['GET', 'POST', 'PUT', 'PATCH']).defaultTo('POST')
+      t.text('headers') // json string of {key, value} arrays
+      t.enum('body_type', ['form', 'json']).defaultTo('json')
+      t.text('body_mapping') // json string of mappings
+      t.enum('status', ['active', 'inactive']).defaultTo('active')
+      t.timestamps(true, true)
+    })
+  }
 }
 
 export async function resetDB(store: Store): Promise<{ success: boolean; message: string }> {
@@ -205,7 +220,7 @@ export async function resetDB(store: Store): Promise<{ success: boolean; message
       // In PG we can use DROP TABLE ... CASCADE or just drop in order
     }
 
-    const tables = ['seo_audits', 'articles', 'keywords', 'campaigns', 'personas', 'thumbnail_prompts']
+    const tables = ['webhooks', 'seo_audits', 'articles', 'keywords', 'campaigns', 'personas', 'thumbnail_prompts']
     for (const table of tables) {
       await knex.schema.dropTableIfExists(table)
     }

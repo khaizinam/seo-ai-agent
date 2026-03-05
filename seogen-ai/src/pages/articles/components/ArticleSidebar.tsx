@@ -14,6 +14,8 @@ interface Props {
   setSelKeyword: (v: string) => void
   selPersona: string
   setSelPersona: (v: string) => void
+  status: string
+  setStatus: (v: string) => void
   plannedKeywordName: string
   isEdit: boolean
   plannedId: string | null
@@ -28,6 +30,7 @@ interface Props {
 export function ArticleSidebar({
   campaigns, personas, keywords,
   selCampaign, setSelCampaign, selKeyword, setSelKeyword, selPersona, setSelPersona,
+  status, setStatus,
   plannedKeywordName, isEdit, plannedId,
   saving, generating,
   onSave, onSaveAndExit, onExit, onGenFull
@@ -81,7 +84,7 @@ export function ArticleSidebar({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
               <label className="label">Chiến dịch</label>
-              <select className="select" value={selCampaign} onChange={e => { setSelCampaign(e.target.value); setSelKeyword('') }} disabled={isEdit || !!plannedId}>
+              <select className="select" value={selCampaign} onChange={e => { setSelCampaign(e.target.value); setSelKeyword('') }} disabled={!!plannedId}>
                 <option value="">-- Chọn chiến dịch --</option>
                 {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
@@ -107,6 +110,15 @@ export function ArticleSidebar({
               <select className="select" value={selPersona} onChange={e => setSelPersona(e.target.value)}>
                 <option value="">-- Mặc định --</option>
                 {personas.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="label">Trạng thái bài viết</label>
+              <select className="select" value={status} onChange={e => setStatus(e.target.value)}>
+                <option value="draft">Bản nháp (Draft)</option>
+                <option value="reviewed">Đã duyệt (Reviewed)</option>
+                <option value="published">Đã xuất bản (Published)</option>
               </select>
             </div>
 

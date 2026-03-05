@@ -1,7 +1,7 @@
 import { HashRouter, Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Target, Users, FileText, Image, BarChart3,
-  Settings, ChevronRight, Zap, Database, Globe, AlertTriangle, ImageDown
+  Settings, ChevronRight, Zap, Database, Globe, AlertTriangle, ImageDown, Link2
 } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import CampaignIndex from './pages/campaigns/CampaignIndex'
@@ -9,23 +9,25 @@ import CampaignForm from './pages/campaigns/CampaignForm'
 import PersonaPage from './pages/Persona'
 import ArticleIndex from './pages/articles/ArticleIndex'
 import ArticleForm from './pages/articles/ArticleForm'
-import MetaManagerPage from './pages/MetaManager'
 import ThumbnailPage from './pages/Thumbnail'
 import AuditPage from './pages/Audit'
 import SettingsPage from './pages/Settings'
 import ImageConverterPage from './pages/ImageConverter'
+import WebhookIndex from './pages/webhooks/WebhookIndex';
+import WebhookForm from './pages/webhooks/WebhookForm';
 import { useAppStore } from './stores/app.store'
 import { Toast } from './components/ui/Toast'
 import { useEffect } from 'react'
+import logo from './assets/logo.png'
 
 const NAV_MAIN = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', exact: true },
   { to: '/campaign', icon: Target, label: 'Chiến dịch' },
-  { to: '/persona', icon: Users, label: 'Nhân vật viết bài' },
   { to: '/article', icon: FileText, label: 'Bài viết' },
-  { to: '/meta', icon: Globe, label: 'Meta SEO Manager' },
-  { to: '/thumbnail', icon: Image, label: 'Thumbnail AI' },
+  { to: '/webhook', icon: Link2, label: 'Webhooks' },
   { to: '/audit', icon: BarChart3, label: 'SEO Audit' },
+  { to: '/thumbnail', icon: Image, label: 'Thumbnail AI' },
+  { to: '/persona', icon: Users, label: 'Nhân vật viết bài' },
 ]
 
 const NAV_SETTING = [
@@ -128,11 +130,12 @@ export default function App() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
                 width: 36, height: 36, borderRadius: 10,
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 0 20px rgba(99,102,241,0.4)',
+                overflow: 'hidden',
+                background: 'white'
               }}>
-                <Zap size={18} color="white" />
+                <img src={logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.3px', color: 'var(--text-primary)' }}>
@@ -214,9 +217,11 @@ export default function App() {
                 <Route path="/article" element={<ArticleIndex />} />
                 <Route path="/article/create" element={<ArticleForm />} />
                 <Route path="/article/edit/:id" element={<ArticleForm />} />
-                <Route path="/meta" element={<MetaManagerPage />} />
                 <Route path="/thumbnail" element={<ThumbnailPage />} />
                 <Route path="/audit" element={<AuditPage />} />
+                <Route path="/webhook" element={<WebhookIndex />} />
+                <Route path="/webhook/create" element={<WebhookForm />} />
+                <Route path="/webhook/edit/:id" element={<WebhookForm />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </>
             ) : (

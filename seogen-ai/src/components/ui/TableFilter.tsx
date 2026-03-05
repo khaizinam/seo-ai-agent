@@ -17,10 +17,17 @@ export type SortConfig = {
   label: string
 }
 
+export type ExtraInputConfig = {
+  key: string
+  placeholder: string
+  label?: string
+}
+
 type TableFilterProps = {
   filters?: FilterConfig[]
+  extraInputs?: ExtraInputConfig[]
   sorts?: SortConfig[]
-  onSearch: (params: { keyword: string; filters: Record<string, string>; sortBy: string; sortDir: 'asc' | 'desc' }) => void
+  onSearch: (params: { keyword: string; filters: Record<string, string>; extraVals: Record<string, string>; sortBy: string; sortDir: 'asc' | 'desc' }) => void
   createLabel?: string
   onCreateClick?: () => void
   initialSortBy?: string
@@ -30,6 +37,7 @@ type TableFilterProps = {
 
 export function TableFilter({
   filters = [],
+  extraInputs = [],
   sorts = [],
   onSearch,
   createLabel = 'Tạo mới',
@@ -42,12 +50,15 @@ export function TableFilter({
   const [filterValues, setFilterValues] = useState<Record<string, string>>(
     Object.fromEntries(filters.map(f => [f.key, '']))
   )
+  const [extraVals, setExtraVals] = useState<Record<string, string>>(
+    Object.fromEntries(extraInputs.map(e => [e.key, '']))
+  )
   const [sortBy, setSortBy] = useState(initialSortBy)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>(initialSortDir)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleSearch = () => {
-    onSearch({ keyword, filters: filterValues, sortBy, sortDir })
+    onSearch({ keyword, filters: filterValues, extraVals, sortBy, sortDir })
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -57,13 +68,19 @@ export function TableFilter({
   const handleReset = () => {
     setKeyword('')
     setFilterValues(Object.fromEntries(filters.map(f => [f.key, ''])))
+    setExtraVals(Object.fromEntries(extraInputs.map(e => [e.key, ''])))
     setSortBy(initialSortBy)
     setSortDir(initialSortDir)
-    onSearch({ keyword: '', filters: Object.fromEntries(filters.map(f => [f.key, ''])), sortBy: initialSortBy, sortDir: initialSortDir })
+    onSearch({ 
+      keyword: '', 
+      filters: Object.fromEntries(filters.map(f => [f.key, ''])), 
+      extraVals: Object.fromEntries(extraInputs.map(e => [e.key, ''])),
+      sortBy: initialSortBy, sortDir: initialSortDir 
+    })
     inputRef.current?.focus()
   }
 
-  const hasActiveFilters = keyword || Object.values(filterValues).some(v => v)
+  const hasActiveFilters = keyword || Object.values(filterValues).some(v => v) || Object.values(extraVals).some(v => v)
 
   return (
     <div className="glass-card" style={{ padding: '16px', marginBottom: 16 }}>
@@ -105,6 +122,22 @@ export function TableFilter({
                     ))}
                   </select>
                 </div>
+              </div>
+            ))}
+            
+            {extraInputs.map(e => (
+              <div key={e.key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                  {e.label || e.placeholder}
+                </label>
+                <input
+                  className="input"
+                  style={{ minWidth: 100, maxWidth: 140, height: 38 }}
+                  placeholder={e.placeholder}
+                  value={extraVals[e.key] || ''}
+                  onChange={ev => setExtraVals(prev => ({ ...prev, [e.key]: ev.target.value }))}
+                  onKeyDown={handleKeyDown}
+                />
               </div>
             ))}
           </div>

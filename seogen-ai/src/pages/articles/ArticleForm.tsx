@@ -55,6 +55,7 @@ export default function ArticleForm() {
   const [selCampaign, setSelCampaign] = useState('')
   const [selKeyword, setSelKeyword] = useState('')
   const [selPersona, setSelPersona] = useState('')
+  const [status, setStatus] = useState('draft')
   
   const [title, setTitle] = useState('')
   const [contentHtml, setContentHtml] = useState('')
@@ -130,6 +131,7 @@ export default function ArticleForm() {
           }
           const name = art.keyword || art.keyword_from_db || ''
           if (name) setPlannedKeywordName(name)
+          if (art.status) setStatus(art.status)
         }
       } else {
         if (pers && pers.length > 0) setSelPersona(pers[0].id.toString())
@@ -397,7 +399,7 @@ export default function ArticleForm() {
 
       if (articleId) {
         const payload: any = { 
-          id: +articleId, title, 
+          id: +articleId, title, status,
           content_html: contentHtml, content_text: textContent,
           meta_title: metaTitle, meta_description: metaDescription,
           content_social: JSON.stringify(socialContent),
@@ -415,7 +417,7 @@ export default function ArticleForm() {
           meta_title: metaTitle, meta_description: metaDescription,
           content_social: JSON.stringify(socialContent),
           thumbnail_prompt: thumbnailPrompt,
-          status: 'draft',
+          status: status,
         })
         articleId = saved.id?.toString() || null
       }
@@ -461,7 +463,7 @@ export default function ArticleForm() {
 
       if (articleId) {
         const payload: any = {
-          id: +articleId, title: ttl,
+          id: +articleId, title: ttl, status,
           content_html: html, content_text: textContent,
           meta_title: metaTitle, meta_description: metaDescription,
           content_social: JSON.stringify(social),
@@ -479,7 +481,7 @@ export default function ArticleForm() {
           meta_title: metaTitle, meta_description: metaDescription,
           content_social: JSON.stringify(social),
           thumbnail_prompt: thumb,
-          status: 'draft',
+          status: status,
         })
         if (saved.id) {/* navigate to edit URL so future saves use update */}
       }
@@ -559,6 +561,7 @@ export default function ArticleForm() {
           selCampaign={selCampaign} setSelCampaign={setSelCampaign}
           selKeyword={selKeyword} setSelKeyword={setSelKeyword}
           selPersona={selPersona} setSelPersona={setSelPersona}
+          status={status} setStatus={setStatus}
           plannedKeywordName={plannedKeywordName}
           isEdit={isEdit} plannedId={plannedId}
           saving={saving} generating={generating}

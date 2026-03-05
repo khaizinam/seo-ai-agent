@@ -41,7 +41,7 @@ export default function ArticleIndex() {
 
   // Applied filter (persisted)
   const [appliedFilter, setAppliedFilter] = useTableState('article_filter', {
-    keyword: '', status: '', sortKey: 'created_at', sortDir: 'desc' as 'asc' | 'desc'
+    keyword: '', status: '', campaign_id: '', sortKey: 'created_at', sortDir: 'desc' as 'asc' | 'desc'
   })
 
   // Table state (persisted)
@@ -65,7 +65,8 @@ export default function ArticleIndex() {
       const kw = appliedFilter.keyword.toLowerCase()
       const matchKw = !kw || a.title.toLowerCase().includes(kw) || (a.keyword || '').toLowerCase().includes(kw)
       const matchStatus = !appliedFilter.status || a.status === appliedFilter.status
-      return matchKw && matchStatus
+      const matchCamp = !appliedFilter.campaign_id || a.campaign_id === +appliedFilter.campaign_id
+      return matchKw && matchStatus && matchCamp
     })
     const k = sort.key as keyof Article
     return [...res].sort((a, b) => {
@@ -87,6 +88,7 @@ export default function ArticleIndex() {
     setAppliedFilter({
       keyword: params.keyword,
       status: params.filters.status || '',
+      campaign_id: params.extraVals?.campaign_id || '',
       sortKey: params.sortBy || 'created_at',
       sortDir: params.sortDir || 'desc',
     })
@@ -119,7 +121,7 @@ export default function ArticleIndex() {
     },
     {
       key: 'status', title: 'Trạng thái', width: 120, sortable: true,
-      render: a => <span className={`badge ${STATUS_BADGE[a.status] || 'badge-muted'}`}>{STATUS_OPTS.find(o => o.value === a.status)?.label || a.status}</span>
+      render: a => <span className={`badge ${STATUS_BADGE[a.status] || 'badge-muted'}`} style={{ textTransform: 'capitalize' }}>{a.status}</span>
     },
     {
       key: 'seo_score', title: 'SEO Score', width: 100, sortable: true,
@@ -172,6 +174,7 @@ export default function ArticleIndex() {
         initialSortBy={appliedFilter.sortKey}
         initialSortDir={appliedFilter.sortDir}
         filters={[{ key: 'status', placeholder: 'Trạng thái', options: STATUS_OPTS }]}
+        extraInputs={[{ key: 'campaign_id', placeholder: 'Mã chiến dịch (ID)' }]}
         sorts={[
           { key: 'created_at', label: 'Ngày tạo' },
           { key: 'seo_score', label: 'Điểm SEO' },
