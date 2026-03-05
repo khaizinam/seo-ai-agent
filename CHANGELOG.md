@@ -1,5 +1,12 @@
 # CHANGELOG
 
+<div align="center">
+  <a href="README.md">Trang chủ (README)</a> &nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="FEATURE.md">Tính năng (Features)</a> &nbsp;&nbsp;|&nbsp;&nbsp;
+  <b>Lịch sử Cập nhật (Changelog)</b>
+</div>
+<br/>
+
 Tất cả các thay đổi đáng chú ý của dự án **SEOGEN AI** sẽ được ghi lại trong file này.
 
 Định dạng dựa trên [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), 

@@ -1,5 +1,12 @@
 # SEOGEN AI - Chuyên gia Sáng tạo Nội dung SEO Đỉnh cao
 
+<div align="center">
+  <b>Trang chủ (README)</b> &nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="FEATURE.md">Tính năng (Features)</a> &nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="CHANGELOG.md">Lịch sử Cập nhật (Changelog)</a>
+</div>
+<br/>
+
 **SEOGEN AI** là một ứng dụng desktop mạnh mẽ được thiết kế để tự động hóa quy trình sản xuất nội dung chuẩn SEO, quản lý chiến dịch nội dung và tối ưu hóa sự hiện diện trên mạng xã hội. Với sức mạnh từ các mô hình AI tiên tiến nhất hiện nay, SEOGEN giúp bạn tăng tốc độ viết bài gấp 10 lần trong khi vẫn đảm bảo chất lượng và tính cá nhân hóa cao.
 
 ---
