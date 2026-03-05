@@ -210,7 +210,7 @@ export default function ArticleIndex() {
         loading={loading}
       />
 
-      <div className="glass-card" style={{ padding: 0, overflow: 'hidden', marginTop: 16 }}>
+      <div style={{ marginTop: 16 }}>
         <DataTable
           data={pageData}
           columns={columns}

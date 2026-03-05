@@ -4,6 +4,7 @@ import { useAppStore } from '../../stores/app.store'
 import { Loader2, Sparkles } from 'lucide-react'
 import { AIProcessingOverlay } from '../../components/ui/AIProcessingOverlay'
 import { useNavigate } from 'react-router-dom'
+import { Pagination } from '../ui/Pagination'
 
 export interface PlannedArticle {
   id: number
@@ -108,9 +109,7 @@ export default function CampaignPlanTab({ campaignId }: Props) {
   const paginatedPlan = plan.slice(startIndex, startIndex + itemsPerPage)
 
   const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage)
-    }
+    setCurrentPage(newPage)
   }
 
   return (
@@ -189,51 +188,15 @@ export default function CampaignPlanTab({ campaignId }: Props) {
           </div>
 
           {totalItems > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', flexWrap: 'wrap', gap: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                <span>Hiển thị</span>
-                <select 
-                  className="select" 
-                  style={{ height: 32, padding: '0 10px', fontSize: 13, minWidth: 70 }}
-                  value={itemsPerPage}
-                  onChange={(e) => {
-                    setItemsPerPage(+e.target.value)
-                    setCurrentPage(1)
-                  }}
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-                <span>bài viết / trang</span>
-                <span style={{ marginLeft: 16 }}>
-                  (Tổng cộng: <b style={{ color: 'var(--text-primary)' }}>{totalItems}</b> bài viết)
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button 
-                  className="btn-secondary" 
-                  style={{ padding: '6px 12px', fontSize: 13 }}
-                  disabled={currentPage === 1}
-                  onClick={() => handlePageChange(currentPage - 1)}
-                >
-                  Trang trước
-                </button>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 40, fontSize: 13, fontWeight: 600 }}>
-                  {currentPage} / {totalPages || 1}
-                </div>
-                <button 
-                  className="btn-secondary" 
-                  style={{ padding: '6px 12px', fontSize: 13 }}
-                  disabled={currentPage === totalPages || totalPages === 0}
-                  onClick={() => handlePageChange(currentPage + 1)}
-                >
-                  Trang sau
-                </button>
-              </div>
-            </div>
+            <Pagination
+              state={{ page: currentPage, pageSize: itemsPerPage, total: totalItems }}
+              onPageChange={handlePageChange}
+              onPageSizeChange={(size) => {
+                setItemsPerPage(size)
+                setCurrentPage(1)
+              }}
+              pageSizeOptions={[10, 20, 50, 100]}
+            />
           )}
         </div>
       </div>

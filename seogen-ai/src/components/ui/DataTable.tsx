@@ -1,5 +1,6 @@
 import React from 'react'
-import { ChevronUp, ChevronDown, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react'
+import { ChevronUp, ChevronDown } from 'lucide-react'
+import { Pagination, PaginationState } from './Pagination'
 
 export type ColumnDef<T> = {
   key: string
@@ -10,11 +11,7 @@ export type ColumnDef<T> = {
   render?: (row: T, index: number) => React.ReactNode
 }
 
-export type PaginationState = {
-  page: number
-  pageSize: number
-  total: number
-}
+export type { PaginationState }
 
 export type SortState = {
   key: string
@@ -62,14 +59,6 @@ export function DataTable<T>({
     return sort.dir === 'asc' ? <ChevronUp size={11} /> : <ChevronDown size={11} />
   }
 
-  const getPaginationPages = () => {
-    const delta = 2
-    const range: number[] = []
-    for (let i = Math.max(1, page - delta); i <= Math.min(totalPages, page + delta); i++) {
-      range.push(i)
-    }
-    return range
-  }
 
   return (
     <div>
@@ -141,38 +130,13 @@ export function DataTable<T>({
         </div>
       </div>
 
-      {/* Footer: page size + pagination */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-muted)' }}>
-          <span>Hiển thị</span>
-          <select className="select" style={{ width: 80, fontSize: 12, padding: '0 8px', height: 32 }}
-            value={pageSize} onChange={e => { onPageSizeChange?.(+e.target.value); onPageChange?.(1) }}>
-            {pageSizeOptions.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <span>/ {total} kết quả</span>
-        </div>
-
-        {totalPages > 1 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <button className="btn-ghost" style={{ padding: '4px 6px' }} onClick={() => onPageChange?.(1)} disabled={page === 1}><ChevronsLeft size={14} /></button>
-            <button className="btn-ghost" style={{ padding: '4px 6px' }} onClick={() => onPageChange?.(page - 1)} disabled={page === 1}><ChevronLeft size={14} /></button>
-
-            {getPaginationPages().map(p => (
-              <button key={p} onClick={() => onPageChange?.(p)} style={{
-                minWidth: 30, height: 30, borderRadius: 6, border: 'none', cursor: 'pointer',
-                fontSize: 13, fontWeight: p === page ? 700 : 400,
-                background: p === page ? 'var(--brand-primary)' : 'transparent',
-                color: p === page ? 'white' : 'var(--text-primary)',
-                transition: 'all 0.15s'
-              }}>{p}</button>
-            ))}
-
-            <button className="btn-ghost" style={{ padding: '4px 6px' }} onClick={() => onPageChange?.(page + 1)} disabled={page === totalPages}><ChevronRight size={14} /></button>
-            <button className="btn-ghost" style={{ padding: '4px 6px' }} onClick={() => onPageChange?.(totalPages)} disabled={page === totalPages}><ChevronsRight size={14} /></button>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6 }}>Trang {page}/{totalPages}</span>
-          </div>
-        )}
-      </div>
+      {/* Footer: Pagination */}
+      <Pagination
+        state={pagination}
+        onPageChange={onPageChange || (() => {})}
+        onPageSizeChange={onPageSizeChange || (() => {})}
+        pageSizeOptions={pageSizeOptions}
+      />
     </div>
   )
 }
