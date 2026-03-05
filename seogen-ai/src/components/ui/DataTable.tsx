@@ -145,7 +145,7 @@ export function DataTable<T>({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-muted)' }}>
           <span>Hiển thị</span>
-          <select className="select" style={{ width: 80, fontSize: 12, padding: '4px 8px', height: 30 }}
+          <select className="select" style={{ width: 80, fontSize: 12, padding: '0 8px', height: 32 }}
             value={pageSize} onChange={e => { onPageSizeChange?.(+e.target.value); onPageChange?.(1) }}>
             {pageSizeOptions.map(s => <option key={s} value={s}>{s}</option>)}
           </select>

@@ -18,11 +18,11 @@ export function ArticleThumbnailPrompt({ thumbnailPrompt, setThumbnailPrompt, ge
         </div>
         <button 
           className="btn-ghost" 
-          style={{ fontSize: 12, color: 'var(--brand-primary)', gap: 6 }}
+          style={{ fontSize: 11, color: 'var(--brand-primary)', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(99,102,241,0.05)' }}
           onClick={onGenThumb}
           disabled={generating}
         >
-          {generating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+          {generating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
           AI Gen Prompt Thumbs
         </button>
       </div>

@@ -1,4 +1,4 @@
-import { Copy } from 'lucide-react'
+import { Copy, Loader2, Sparkles } from 'lucide-react'
 
 interface Props {
   metaTitle: string
@@ -6,12 +6,29 @@ interface Props {
   metaDescription: string
   setMetaDescription: (v: string) => void
   onCopy: (text: string, label: string) => void
+  generating: boolean
+  onGenMeta: () => void
 }
 
-export function ArticleSeoMeta({ metaTitle, setMetaTitle, metaDescription, setMetaDescription, onCopy }: Props) {
+export function ArticleSeoMeta({ 
+  metaTitle, setMetaTitle, 
+  metaDescription, setMetaDescription, 
+  onCopy, generating, onGenMeta 
+}: Props) {
   return (
     <div className="glass-card" style={{ padding: 24 }}>
-      <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>SEO Meta</h3>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>SEO Meta</h3>
+        <button 
+          className="btn-ghost" 
+          style={{ fontSize: 11, color: 'var(--brand-primary)', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(99,102,241,0.05)' }}
+          onClick={onGenMeta}
+          disabled={generating}
+        >
+          {generating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+          AI Gen Meta
+        </button>
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div>
           <label className="label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

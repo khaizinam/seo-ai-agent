@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { invoke } from '../../lib/api'
 import { useAppStore } from '../../stores/app.store'
-import { Loader2, Sparkles, Plus } from 'lucide-react'
+import { Loader2, Sparkles } from 'lucide-react'
 import { AIProcessingOverlay } from '../../components/ui/AIProcessingOverlay'
 import { useNavigate } from 'react-router-dom'
 
@@ -17,11 +17,6 @@ export interface PlannedArticle {
   content_html?: string
 }
 
-interface Persona {
-  id: number
-  name: string
-}
-
 interface Props {
   campaignId: string
 }
@@ -32,15 +27,10 @@ export default function CampaignPlanTab({ campaignId }: Props) {
 
   const [loading, setLoading] = useState(true)
   const [plan, setPlan] = useState<PlannedArticle[]>([])
-  const [personas, setPersonas] = useState<Persona[]>([])
-  const [selectedPersonaId, setSelectedPersonaId] = useState<number | ''>('')
   
   const [campData, setCampData] = useState<any>(null)
   
   const [planLoading, setPlanLoading] = useState(false)
-  const [showWriteModal, setShowWriteModal] = useState<PlannedArticle | null>(null)
-  const [writingContent, setWritingContent] = useState(false)
-  const [viewArticle, setViewArticle] = useState<{ html: string; title: string } | null>(null)
   const [aiOverlayVisible, setAiOverlayVisible] = useState(false)
   const [aiOverlayStep, setAiOverlayStep] = useState('')
 
@@ -51,19 +41,13 @@ export default function CampaignPlanTab({ campaignId }: Props) {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [articles, pers, camp] = await Promise.all([
+      const [articles, camp] = await Promise.all([
         invoke<PlannedArticle[]>('article:list', { campaign_id: +campaignId }),
-        invoke<Persona[]>('persona:list'),
         invoke<any>('campaign:get', +campaignId)
       ])
       
       setPlan(articles || [])
       setCampData(camp || null)
-      
-      if (pers) {
-        setPersonas(pers)
-        if (pers.length > 0) setSelectedPersonaId(pers[0].id)
-      }
     } catch (e: any) {
       setToast({ message: e.message || 'Lỗi khi tải dữ liệu Kế hoạch', type: 'error' })
     } finally {
@@ -105,30 +89,7 @@ export default function CampaignPlanTab({ campaignId }: Props) {
     }
   }
 
-  const handleWriteArticle = async () => {
-    if (!showWriteModal || !selectedPersonaId) return
-    setWritingContent(true)
-    setAiOverlayVisible(true)
-    setAiOverlayStep(`Đang viết bài: "${showWriteModal.title}"...`)
-    try {
-      const res = await invoke<{ success: boolean; content?: string; error?: string }>('article:generateFullContent', {
-        articleId: showWriteModal.id,
-        personaId: +selectedPersonaId
-      })
-      if (res.success) {
-        setToast({ message: 'Đã viết xong bài viết!', type: 'success' })
-        await fetchData()
-        setShowWriteModal(null)
-      } else {
-        setToast({ message: res.error || 'Lỗi khi viết bài', type: 'error' })
-      }
-    } catch (e: any) {
-      setToast({ message: e.message, type: 'error' })
-    } finally {
-      setWritingContent(false)
-      setAiOverlayVisible(false)
-    }
-  }
+
 
   if (loading) {
     return (
@@ -206,28 +167,13 @@ export default function CampaignPlanTab({ campaignId }: Props) {
                       </span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      {art.content_html ? (
-                        <button className="badge badge-success" onClick={() => setViewArticle({ html: art.content_html || '', title: art.title })}>
-                          Xem bài
-                        </button>
-                      ) : (
-                        <div style={{display: 'flex', gap: 6, justifyContent: 'flex-end'}}>
-                           <button 
-                            className="btn-primary" 
-                            style={{ padding: '6px 12px', fontSize: 11, background: '#a855f7' }}
-                            onClick={() => setShowWriteModal(art)}
-                          >
-                            AI Viết
-                          </button>
-                          <button 
-                            className="btn-primary" 
-                            style={{ padding: '6px 12px', fontSize: 11, background: 'var(--brand-primary)' }}
-                            onClick={() => navigate(`/article/create?plannedId=${art.id}`)}
-                          >
-                            Viết tay
-                          </button>
-                        </div>
-                      )}
+                      <button 
+                        className={`badge ${art.content_html ? 'badge-success' : 'badge-purple'}`}
+                        style={{ cursor: 'pointer', border: 'none' }}
+                        onClick={() => navigate(`/article/edit/${art.id}`)}
+                      >
+                        {art.content_html ? 'Xem bài' : 'Xem bài'}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -292,75 +238,12 @@ export default function CampaignPlanTab({ campaignId }: Props) {
         </div>
       </div>
 
-      {/* Article viewer modal */}
-      {viewArticle && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ width: '85vw', maxWidth: 860, height: '85vh', display: 'flex', flexDirection: 'column' }} className="glass-card">
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 600, fontSize: 16 }}>{viewArticle.title}</span>
-              <button className="btn-ghost" onClick={() => setViewArticle(null)} style={{ fontSize: 20 }}>✕</button>
-            </div>
-            <div style={{ flex: 1, overflow: 'auto', padding: 32, background: '#fff', borderRadius: '0 0 10px 10px' }}>
-              <div style={{ color: '#1a1a1a', lineHeight: 1.8, fontFamily: 'Georgia, serif', fontSize: 16 }} dangerouslySetInnerHTML={{ __html: viewArticle.html }} />
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Write Article Modal */}
-      {showWriteModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
-          <div className="glass-card" style={{ width: '100%', maxWidth: 500, padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Viết bài với AI</h3>
-            </div>
-            
-            <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Bài viết chuẩn bị viết:</div>
-                <div style={{ fontWeight: 600, fontSize: 15 }}>{showWriteModal.title}</div>
-                <div style={{ fontSize: 12, color: 'var(--brand-primary)', marginTop: 4 }}>Từ khoá: {showWriteModal.keyword}</div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <label className="label">Chọn Nhân vật / Giọng văn</label>
-                <select 
-                  className="select" 
-                  value={selectedPersonaId}
-                  onChange={e => setSelectedPersonaId(+e.target.value)}
-                >
-                  {personas.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                  {personas.length === 0 && <option value="">Chưa có nhân vật nào</option>}
-                </select>
-              </div>
-
-              <div style={{ fontSize: 13, color: 'var(--text-muted)', background: 'var(--surface-1)', padding: 12, borderRadius: 8, border: '1px solid var(--border)' }}>
-                AI sẽ tạo nội dung bài viết theo tiêu chuẩn HTML (H2-H6, P, A, STRONG), dài 1000-2000 từ.
-              </div>
-            </div>
-
-            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-              <button className="btn-secondary" onClick={() => setShowWriteModal(null)} disabled={writingContent}>Hủy</button>
-              <button 
-                className="btn-primary" 
-                style={{ background: 'var(--brand-primary)', color: 'white' }} 
-                onClick={handleWriteArticle} 
-                disabled={writingContent || !selectedPersonaId}
-              >
-                {writingContent ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                Bắt đầu viết bài
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <AIProcessingOverlay
         visible={aiOverlayVisible}
         stepLabel={aiOverlayStep}
-        onCancel={() => { setAiOverlayVisible(false); setPlanLoading(false); setWritingContent(false) }}
+        onCancel={() => { setAiOverlayVisible(false); setPlanLoading(false); }}
       />
     </>
   )

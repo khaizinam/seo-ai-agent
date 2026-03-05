@@ -1,4 +1,4 @@
-import { Loader2, Save, Check, Sparkles } from 'lucide-react'
+import { Loader2, Save, Check, Sparkles, Send } from 'lucide-react'
 
 interface Campaign { id: number; name: string }
 interface Persona { id: number; name: string }
@@ -16,6 +16,10 @@ interface Props {
   setSelPersona: (v: string) => void
   status: string
   setStatus: (v: string) => void
+  weekNumber: number
+  setWeekNumber: (v: number) => void
+  articleType: 'pillar' | 'satellite'
+  setArticleType: (v: 'pillar' | 'satellite') => void
   plannedKeywordName: string
   isEdit: boolean
   plannedId: string | null
@@ -25,15 +29,18 @@ interface Props {
   onSaveAndExit: () => void
   onExit: () => void
   onGenFull: () => void
+  onPublish: () => void
 }
 
 export function ArticleSidebar({
   campaigns, personas, keywords,
   selCampaign, setSelCampaign, selKeyword, setSelKeyword, selPersona, setSelPersona,
   status, setStatus,
+  weekNumber, setWeekNumber,
+  articleType, setArticleType,
   plannedKeywordName, isEdit, plannedId,
   saving, generating,
-  onSave, onSaveAndExit, onExit, onGenFull
+  onSave, onSaveAndExit, onExit, onGenFull, onPublish
 }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, position: 'relative' }}>
@@ -63,6 +70,18 @@ export function ArticleSidebar({
               <Check size={16} />
               Lưu &amp; Thoát
             </button>
+
+            {isEdit && (
+              <button 
+                className="btn-primary" 
+                style={{ height: 44, width: '100%', justifyContent: 'center', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}
+                onClick={onPublish}
+                disabled={saving || generating}
+              >
+                <Send size={16} />
+                Cập nhật lên trang
+              </button>
+            )}
 
             <button 
               className="btn-secondary" 
@@ -110,6 +129,25 @@ export function ArticleSidebar({
               <select className="select" value={selPersona} onChange={e => setSelPersona(e.target.value)}>
                 <option value="">-- Mặc định --</option>
                 {personas.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="label">Tuần thực hiện</label>
+              <input 
+                type="number" 
+                className="select" 
+                min={1} 
+                value={weekNumber} 
+                onChange={e => setWeekNumber(+e.target.value)} 
+              />
+            </div>
+
+            <div>
+              <label className="label">Loại bài viết</label>
+              <select className="select" value={articleType} onChange={e => setArticleType(e.target.value as any)}>
+                <option value="pillar">Pillar (Trụ cột)</option>
+                <option value="satellite">Satellite (Vệ tinh)</option>
               </select>
             </div>
 

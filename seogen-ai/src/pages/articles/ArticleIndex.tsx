@@ -4,8 +4,9 @@ import { invoke } from '../../lib/api'
 import { DataTable, ColumnDef, PaginationState, SortState } from '../../components/ui/DataTable'
 import { TableFilter } from '../../components/ui/TableFilter'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
-import { Edit2, Trash2, Plus } from 'lucide-react'
+import { Edit2, Trash2, Plus, Send } from 'lucide-react'
 import { useTableState } from '../../hooks/useTableState'
+import { PublishModal } from './components/PublishModal'
 
 interface Article { 
   id: number; 
@@ -18,6 +19,8 @@ interface Article {
   created_at: string;
   campaign_id?: number;
   persona_id?: number;
+  week_number?: number;
+  article_type?: string;
 }
 
 const STATUS_OPTS = [
@@ -49,6 +52,7 @@ export default function ArticleIndex() {
   const [sort, setSort] = useTableState<SortState>('article_sort', { key: 'created_at', dir: 'desc' })
 
   const [deleteItem, setDeleteItem] = useState<Article | null>(null)
+  const [showPublishModal, setShowPublishModal] = useState<number | null>(null)
 
   const load = async () => {
     setLoading(true)
@@ -120,6 +124,18 @@ export default function ArticleIndex() {
       )
     },
     {
+      key: 'article_type', title: 'Loại', width: 100, sortable: true,
+      render: a => (
+        <span className={`badge ${a.article_type === 'pillar' ? 'badge-purple' : 'badge-muted'}`}>
+          {a.article_type === 'pillar' ? 'Pillar' : 'Satellite'}
+        </span>
+      )
+    },
+    {
+      key: 'week_number', title: 'Tuần', width: 60, align: 'center', sortable: true,
+      render: a => <span style={{ fontWeight: 700 }}>{a.week_number || 1}</span>
+    },
+    {
       key: 'status', title: 'Trạng thái', width: 120, sortable: true,
       render: a => <span className={`badge ${STATUS_BADGE[a.status] || 'badge-muted'}`} style={{ textTransform: 'capitalize' }}>{a.status}</span>
     },
@@ -135,6 +151,15 @@ export default function ArticleIndex() {
       key: 'actions', title: 'Thao tác', align: 'right', width: 140,
       render: a => (
         <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+
+          <button 
+            className="btn-ghost" 
+            style={{ padding: 6, color: 'var(--brand-primary)', borderRadius: 6, width: 28, height: 28 }}
+            onClick={() => setShowPublishModal(a.id)}
+            title="Cập nhật lên trang"
+          >
+            <Send size={14} />
+          </button>
 
           <button 
             className="btn-ghost" 
@@ -209,6 +234,12 @@ export default function ArticleIndex() {
         loading={actionLoading}
         onConfirm={handleDelete}
         onCancel={() => setDeleteItem(null)}
+      />
+
+      <PublishModal 
+        open={!!showPublishModal}
+        onClose={() => setShowPublishModal(null)}
+        articleId={showPublishModal || 0}
       />
 
     </div>

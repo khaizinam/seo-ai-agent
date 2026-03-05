@@ -143,7 +143,7 @@ export default function WebhookForm() {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', gap: 16, borderBottom: '1px solid var(--border)', background: 'var(--surface-0)', zIndex: 10 }}>
+      <div className="page-header" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 32px', borderBottom: '1px solid var(--border)', background: 'var(--surface-0)', zIndex: 10 }}>
         <button className="btn-ghost" style={{ padding: 8 }} onClick={() => navigate('/webhook')}>
           <ArrowLeft size={18} />
         </button>
@@ -230,7 +230,7 @@ export default function WebhookForm() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>3. Body Payload</h3>
-                <select className="select" style={{ height: 30, width: 140, fontSize: 13 }} value={bodyType} onChange={e => setBodyType(e.target.value as any)}>
+                <select className="select" style={{ height: 32, width: 140, fontSize: 13, paddingTop: 0, paddingBottom: 0 }} value={bodyType} onChange={e => setBodyType(e.target.value as any)}>
                   <option value="json">JSON Object</option>
                   <option value="form">Form Data</option>
                 </select>

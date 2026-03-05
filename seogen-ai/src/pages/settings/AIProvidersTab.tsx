@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { invoke } from '../../lib/api'
+import { useAppStore } from '../../stores/app.store'
 import {
   Key, ChevronDown, ChevronUp, Loader2, FolderOpen, Save, 
-  Plus, Edit2, Trash2, CheckCircle2, XCircle, Zap, X, RefreshCw, AlertTriangle
+  Plus, Edit2, Trash2, CheckCircle2, XCircle, Zap, X, RefreshCw, AlertTriangle, Eye, EyeOff
 } from 'lucide-react'
 
 const AI_PROVIDERS = [
@@ -59,6 +60,11 @@ export default function AIProvidersTab() {
   const [testing, setTesting] = useState(false)
   const [autoSwitch, setAutoSwitch] = useState(false)
   const [exhaustedIds, setExhaustedIds] = useState<string[]>([])
+  const [showQuickModal, setShowQuickModal] = useState(false)
+  const [quickPrefix, setQuickPrefix] = useState('')
+  const [quickKey, setQuickKey] = useState('')
+  const [showKey, setShowKey] = useState(false)
+  const { setToast } = useAppStore()
 
   // Legacy state
   const [aiConfig, setAiConfig] = useState<any>({})
@@ -162,6 +168,64 @@ export default function AIProvidersTab() {
     setShowModal(false)
   }
 
+  const handleQuickAdd = async () => {
+    if (!quickKey.trim() || loading) return
+    
+    setLoading(true)
+    try {
+      // Define 4 Gemini free tier models
+      const freeModels = [
+        { model: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite' },
+        { model: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+        { model: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite' },
+        { model: 'gemini-3.0-flash', name: 'Gemini 3.0 Flash' },
+      ]
+
+      const baseProfilesLength = profiles.length
+      const prefix = quickPrefix.trim() || 'AI Profile'
+      
+      const newProfiles: AIProfile[] = freeModels.map((m, idx) => {
+        const randomNum = Math.floor(1000 + Math.random() * 9000)
+        return {
+          id: (Date.now() + idx).toString(),
+          name: `${prefix} ${randomNum}`,
+          provider: 'gemini',
+          model: m.model,
+          apiKey: quickKey.trim(),
+          active: baseProfilesLength === 0 && idx === 0
+        }
+      })
+
+      const updated = [...profiles, ...newProfiles].slice(0, 10) // Limit to 10
+      
+      const merged = { 
+        ...aiConfig, 
+        ...rawKeys, 
+        profiles: updated,
+      }
+      await invoke('settings:saveAiConfig', merged)
+      await invoke('ai:saveConfig', merged)
+      
+      setProfiles(updated)
+      setToast({ message: `🚀 Đã thêm nhanh ${newProfiles.length} profile Google Gemini`, type: 'success' })
+      
+      // Clear and close
+      setShowQuickModal(false)
+      setQuickKey('')
+      setQuickPrefix('')
+    } catch (err: any) {
+      setToast({ message: 'Lỗi khi thêm nhanh: ' + err.message, type: 'error' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Hook for toast (not directly available but we can use alert or mock if store not nearby)
+  // Actually the app uses useAppStore
+  // import { useAppStore } from '../../stores/app.store'
+  // Let's check imports
+
+
   const saveAll = async (currentProfiles: AIProfile[]) => {
     setLoading(true)
     const merged = { 
@@ -217,9 +281,14 @@ export default function AIProvidersTab() {
           <h2 style={{ fontSize: 16, fontWeight: 700 }}>Danh sách AI API</h2>
           <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Quản lý các cấu hình AI của bạn trong dạng bảng.</p>
         </div>
-        <button className="btn-primary" onClick={handleOpenAdd} disabled={profiles.length >= 10}>
-          <Plus size={14} /> Thêm AI mới
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn-secondary" onClick={() => setShowQuickModal(true)} disabled={profiles.length >= 10}>
+            <Zap size={14} /> Thêm Nhanh
+          </button>
+          <button className="btn-primary" onClick={handleOpenAdd} disabled={profiles.length >= 10}>
+            <Plus size={14} /> Thêm AI mới
+          </button>
+        </div>
       </div>
 
       {/* Profiles Table */}
@@ -381,9 +450,27 @@ export default function AIProvidersTab() {
               <div>
                 <label className="label">API Key</label>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <input className="input" type="password" value={editingProfile.apiKey} 
-                    onChange={e => setEditingProfile({ ...editingProfile, apiKey: e.target.value })} 
-                    placeholder="Mã API Key..." />
+                  <div style={{ position: 'relative', flex: 1 }}>
+                    <input 
+                      className="input" 
+                      type={showKey ? "text" : "password"} 
+                      value={editingProfile.apiKey} 
+                      onChange={e => setEditingProfile({ ...editingProfile, apiKey: e.target.value })} 
+                      placeholder="Mã API Key..." 
+                      style={{ paddingRight: 40 }}
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowKey(!showKey)}
+                      style={{
+                        position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                        background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4
+                      }}
+                    >
+                      {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                   <button className="btn-secondary" onClick={handleTestKeyInModal} disabled={testing || !editingProfile.apiKey}>
                     {testing ? <Loader2 size={14} className="animate-spin" /> : 'Test'}
                   </button>
@@ -409,6 +496,60 @@ export default function AIProvidersTab() {
               <button className="btn-ghost" onClick={() => setShowModal(false)}>Hủy</button>
               <button className="btn-primary" onClick={handleSaveProfile} disabled={!editingProfile.name || !editingProfile.apiKey}>
                 {loading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Lưu cấu hình
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Quick Add Modal */}
+      {showQuickModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div className="glass-card animate-scale-in" style={{ width: '100%', maxWidth: 450, padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface-1)' }}>
+              <h3 style={{ fontWeight: 700, fontSize: 15 }}>Thêm Nhanh Gemini Free Tier</h3>
+              <button className="btn-ghost" onClick={() => setShowQuickModal(false)}><X size={18} /></button>
+            </div>
+            
+            <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div className="alert alert-info" style={{ padding: 12, borderRadius: 8, background: 'rgba(99,102,241,0.1)', color: 'var(--brand-primary)', fontSize: 13, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <Zap size={18} style={{ flexShrink: 0, marginTop: 2 }} />
+                <div>
+                  Hệ thống sẽ tự động tạo 4 Profile (2.5 Flash, 2.5 Flash Lite, 3.1 Flash Lite, 3.0 Flash) chỉ với 1 API Key duy nhất.
+                </div>
+              </div>
+
+              <div>
+                <label className="label">Tên tiền tố (Prefix Name)</label>
+                <input 
+                  type="text"
+                  className="input" 
+                  value={quickPrefix} 
+                  onChange={e => setQuickPrefix(e.target.value)} 
+                  placeholder="Ví dụ: GEMINI PROJECT 1" 
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <label className="label">Nhập Google Gemini API Key</label>
+                <input 
+                  type="text"
+                  className="input" 
+                  value={quickKey} 
+                  onChange={e => setQuickKey(e.target.value)} 
+                  placeholder="Paste your API Key here..." 
+                  disabled={loading}
+                />
+                <p style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+                  Lưu ý: Thêm nhanh chỉ hỗ trợ các model Free Tier của Google Gemini.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end', background: 'var(--surface-1)' }}>
+              <button className="btn-ghost" onClick={() => setShowQuickModal(false)}>Hủy</button>
+              <button className="btn-primary" onClick={handleQuickAdd} disabled={!quickKey.trim() || loading}>
+                {loading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Xác nhận thêm nhanh
               </button>
             </div>
           </div>

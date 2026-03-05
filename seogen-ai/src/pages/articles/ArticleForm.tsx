@@ -16,6 +16,7 @@ import { ArticleSeoMeta } from './components/ArticleSeoMeta'
 import { ArticleSocialContent } from './components/ArticleSocialContent'
 import { ArticleThumbnailPrompt } from './components/ArticleThumbnailPrompt'
 import { ArticleSidebar } from './components/ArticleSidebar'
+import { PublishModal } from './components/PublishModal'
 
 interface Campaign { id: number; name: string; description?: string }
 interface Persona { id: number; name: string }
@@ -37,6 +38,8 @@ interface Article {
   meta_description?: string;
   content_social?: string | any[];
   thumbnail_prompt?: string;
+  week_number?: number;
+  article_type?: 'pillar' | 'satellite';
 }
 
 export default function ArticleForm() {
@@ -63,6 +66,8 @@ export default function ArticleForm() {
   const [metaDescription, setMetaDescription] = useState('')
   const [socialContent, setSocialContent] = useState<any[]>([])
   const [thumbnailPrompt, setThumbnailPrompt] = useState('')
+  const [weekNumber, setWeekNumber] = useState<number>(1)
+  const [articleType, setArticleType] = useState<'pillar' | 'satellite'>('satellite')
   const [plannedKeywordName, setPlannedKeywordName] = useState('')
   
   const [generating, setGenerating] = useState(false)
@@ -70,6 +75,7 @@ export default function ArticleForm() {
   const [loadingContent, setLoadingContent] = useState(false)
   const [activeTab, setActiveTab] = useState<'html' | 'context'>('context')
   const [showGenFullConfirm, setShowGenFullConfirm] = useState(false)
+  const [showPublishModal, setShowPublishModal] = useState(false)
 
   // AI Overlay state
   const [aiOverlayVisible, setAiOverlayVisible] = useState(false)
@@ -132,6 +138,8 @@ export default function ArticleForm() {
           const name = art.keyword || art.keyword_from_db || ''
           if (name) setPlannedKeywordName(name)
           if (art.status) setStatus(art.status)
+          if (art.week_number) setWeekNumber(art.week_number)
+          if (art.article_type) setArticleType(art.article_type as any)
         }
       } else {
         if (pers && pers.length > 0) setSelPersona(pers[0].id.toString())
@@ -297,7 +305,60 @@ export default function ArticleForm() {
     }
   }
 
-  // ─── Full Process: thin orchestrator reusing the 3 functions above ───
+  // ─── Meta Tag Generation ───
+  async function generateMetaTag(silent = false, contentOverride?: string) {
+    const kw = keywords.find(k => k.id === +selKeyword) || { keyword: title }
+    const articleTitle = title || kw.keyword
+    const htmlSnippet = stripHtmlToText(contentOverride || contentHtml, 1000)
+
+    if (!articleTitle) {
+      if (!silent) setToast({ message: 'Vui lòng nhập Tiêu đề bài viết trước khi tạo Meta', type: 'error' })
+      return false
+    }
+
+    if (!silent) setGenerating(true)
+
+    try {
+      const res = await invoke<{ success: boolean; meta_title: string; meta_description: string; error?: string }>('ai:generateMeta', {
+        keyword: kw.keyword,
+        title: articleTitle,
+        content: htmlSnippet
+      })
+
+      if (res.success) {
+        if (abortRef.current) return false
+        setMetaTitle(res.meta_title)
+        setMetaDescription(res.meta_description)
+        if (!silent) setToast({ message: 'Đã tạo xong SEO Meta', type: 'success' })
+        // Auto-save
+        await silentSave({ metaTitle: res.meta_title, metaDescription: res.meta_description })
+        return { metaTitle: res.meta_title, metaDescription: res.meta_description }
+      } else {
+        throw new Error(res.error || 'Lỗi không xác định khi tạo Meta')
+      }
+    } catch (e: any) {
+      if (!silent) setToast({ message: e.message, type: 'error' })
+      if (silent) throw e
+      return false
+    } finally {
+      if (!silent) setGenerating(false)
+    }
+  }
+
+  async function handleGenMeta() {
+    abortRef.current = false
+    setGenerating(true)
+    setAiOverlayVisible(true)
+    setAiOverlayStep('Đang sinh Meta Title & Meta Description...')
+    try {
+      await generateMetaTag(false)
+    } finally {
+      setAiOverlayVisible(false)
+      setGenerating(false)
+    }
+  }
+
+  // ─── Full Process: thin orchestrator reusing the individual functions ───
   async function generateFullProcess() {
     setShowGenFullConfirm(false)
     setGenerating(true)
@@ -306,23 +367,27 @@ export default function ArticleForm() {
     setAiOverlayVisible(true)
     try {
       // Step 1
-      setAiOverlayStep('⏳ Bước 1/3 — Đang sinh nội dung bài viết...')
+      setAiOverlayStep('⏳ Bước 1/4 — Đang sinh nội dung bài viết...')
       const html = await generateArticle(true)
       if (abortRef.current) return
       if (!html) throw new Error('Không thể tạo nội dung bài viết')
 
       // Step 2
-      setAiOverlayStep('⏳ Bước 2/3 — Đang sinh Social Content...')
-      await generateSocialContent(true, html)
+      setAiOverlayStep('⏳ Bước 2/4 — Đang sinh Meta Title & Meta Description...')
+      const metaRes = await generateMetaTag(true, html)
       if (abortRef.current) return
 
       // Step 3
-      setAiOverlayStep('⏳ Bước 3/3 — Đang sinh Thumbnail Prompt...')
+      setAiOverlayStep('⏳ Bước 3/4 — Đang sinh Social Content...')
+      await generateSocialContent(true, html)
+      if (abortRef.current) return
+
+      // Step 4
+      setAiOverlayStep('⏳ Bước 4/4 — Đang sinh Thumbnail Prompt...')
       await generateThumbnailPrompt(true, html)
       if (abortRef.current) return
 
       setAiOverlayStep('🎉 Hoàn tất!')
-      // Auto-save once at the very end (individual steps already auto-saved)
       setToast({ message: '🎉 Đã hoàn thành toàn bộ quy trình AI!', type: 'success' })
     } catch (e: any) {
       if (!abortRef.current) {
@@ -338,34 +403,40 @@ export default function ArticleForm() {
   // ─── Individual AI with overlay ───
   async function handleGenArticle() {
     abortRef.current = false
+    setGenerating(true)
     setAiOverlayVisible(true)
     setAiOverlayStep('Đang sinh nội dung bài viết...')
     try {
       await generateArticle(false)
     } finally {
       setAiOverlayVisible(false)
+      setGenerating(false)
     }
   }
 
   async function handleGenSocial() {
     abortRef.current = false
+    setGenerating(true)
     setAiOverlayVisible(true)
     setAiOverlayStep('Đang sinh nội dung Social...')
     try {
       await generateSocialContent(false)
     } finally {
       setAiOverlayVisible(false)
+      setGenerating(false)
     }
   }
 
   async function handleGenThumb() {
     abortRef.current = false
+    setGenerating(true)
     setAiOverlayVisible(true)
     setAiOverlayStep('Đang sinh Thumbnail Prompt...')
     try {
       await generateThumbnailPrompt(false)
     } finally {
       setAiOverlayVisible(false)
+      setGenerating(false)
     }
   }
 
@@ -403,7 +474,9 @@ export default function ArticleForm() {
           content_html: contentHtml, content_text: textContent,
           meta_title: metaTitle, meta_description: metaDescription,
           content_social: JSON.stringify(socialContent),
-          thumbnail_prompt: thumbnailPrompt
+          thumbnail_prompt: thumbnailPrompt,
+          week_number: weekNumber,
+          article_type: articleType
         }
         if (selPersona) payload.persona_id = +selPersona
         await invoke('article:update', payload)
@@ -418,6 +491,8 @@ export default function ArticleForm() {
           content_social: JSON.stringify(socialContent),
           thumbnail_prompt: thumbnailPrompt,
           status: status,
+          week_number: weekNumber,
+          article_type: articleType
         })
         articleId = saved.id?.toString() || null
       }
@@ -451,6 +526,8 @@ export default function ArticleForm() {
     socialContent?: any[]
     thumbnailPrompt?: string
     title?: string
+    metaTitle?: string
+    metaDescription?: string
   }) {
     const articleId = id || plannedId
     if (!articleId && !selKeyword) return // can't save without at least a keyword
@@ -465,9 +542,12 @@ export default function ArticleForm() {
         const payload: any = {
           id: +articleId, title: ttl, status,
           content_html: html, content_text: textContent,
-          meta_title: metaTitle, meta_description: metaDescription,
+          meta_title: overrides?.metaTitle ?? metaTitle, 
+          meta_description: overrides?.metaDescription ?? metaDescription,
           content_social: JSON.stringify(social),
           thumbnail_prompt: thumb,
+          week_number: weekNumber,
+          article_type: articleType
         }
         if (selPersona) payload.persona_id = +selPersona
         await invoke('article:update', payload)
@@ -478,10 +558,13 @@ export default function ArticleForm() {
           persona_id: selPersona ? +selPersona : undefined,
           title: ttl || 'Không có tiêu đề',
           content_html: html, content_text: textContent,
-          meta_title: metaTitle, meta_description: metaDescription,
+          meta_title: overrides?.metaTitle ?? metaTitle, 
+          meta_description: overrides?.metaDescription ?? metaDescription,
           content_social: JSON.stringify(social),
           thumbnail_prompt: thumb,
           status: status,
+          week_number: weekNumber,
+          article_type: articleType
         })
         if (saved.id) {/* navigate to edit URL so future saves use update */}
       }
@@ -538,6 +621,8 @@ export default function ArticleForm() {
             metaTitle={metaTitle} setMetaTitle={setMetaTitle}
             metaDescription={metaDescription} setMetaDescription={setMetaDescription}
             onCopy={handleCopyToClipboard}
+            generating={generating}
+            onGenMeta={handleGenMeta}
           />
 
           <ArticleSocialContent
@@ -562,6 +647,8 @@ export default function ArticleForm() {
           selKeyword={selKeyword} setSelKeyword={setSelKeyword}
           selPersona={selPersona} setSelPersona={setSelPersona}
           status={status} setStatus={setStatus}
+          weekNumber={weekNumber} setWeekNumber={setWeekNumber}
+          articleType={articleType} setArticleType={setArticleType}
           plannedKeywordName={plannedKeywordName}
           isEdit={isEdit} plannedId={plannedId}
           saving={saving} generating={generating}
@@ -569,8 +656,15 @@ export default function ArticleForm() {
           onSaveAndExit={() => handleSave(true)}
           onExit={handleExit}
           onGenFull={() => setShowGenFullConfirm(true)}
+          onPublish={() => setShowPublishModal(true)}
         />
       </div>
+
+      <PublishModal 
+        open={showPublishModal} 
+        onClose={() => setShowPublishModal(false)} 
+        articleId={+(id || '0')} 
+      />
 
       <ConfirmDialog 
         open={showGenFullConfirm}

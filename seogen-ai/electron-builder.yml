@@ -28,6 +28,7 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: SEOGEN AI
+  artifactName: "SEOGEN_INSTALL.${ext}"
 
 publish:
   provider: github

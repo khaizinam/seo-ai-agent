@@ -82,4 +82,78 @@ export function registerWebhookIPC() {
       return { success: false, error: e.message }
     }
   })
+
+  // Publish Article to Webhook
+  ipcMain.handle('webhook:publish', async (_, { webhookId, articleId }: { webhookId: number, articleId: number }) => {
+    const axios = require('axios')
+    try {
+      const knex = getKnex()
+      const webhook = await knex('webhooks').where({ id: webhookId }).first()
+      const article = await knex('articles').where({ id: articleId }).first()
+
+      if (!webhook) throw new Error('Webhook không tồn tại')
+      if (!article) throw new Error('Bài viết không tồn tại')
+
+      let headers: any = {}
+      try {
+        const hArr = JSON.parse(webhook.headers || '[]')
+        hArr.forEach((h: any) => { if (h.key) headers[h.key] = h.value })
+      } catch (e) {}
+
+      const mapValue = (val: string) => {
+        if (!val) return val
+        return val
+          .replace(/\{\{title\}\}/g, article.title || '')
+          .replace(/\{\{content\}\}/g, article.content_html || '')
+          .replace(/\{\{meta_title\}\}/g, article.meta_title || '')
+          .replace(/\{\{meta_description\}\}/g, article.meta_description || '')
+          .replace(/\{\{keyword\}\}/g, article.keyword || '')
+          .replace(/\{\{slug\}\}/g, article.slug || '')
+      }
+
+      let body: any = {}
+      if (webhook.body_type === 'json' || webhook.body_type === 'form') {
+        try {
+          const bArr = JSON.parse(webhook.body_mapping || '[]')
+          bArr.forEach((b: any) => {
+            if (b.key) body[b.key] = mapValue(b.value)
+          })
+        } catch (e) {}
+      }
+
+      const config: any = {
+        method: webhook.method,
+        url: webhook.endpoint_url,
+        headers,
+        timeout: 120000, // 120 seconds
+      }
+
+      if (webhook.method !== 'GET') {
+        if (webhook.body_type === 'form') {
+          const params = new URLSearchParams()
+          for (const k in body) params.append(k, body[k])
+          config.data = params
+        } else {
+          config.data = body
+        }
+      }
+
+      const response = await axios(config)
+      return { 
+        success: true, 
+        status: response.status, 
+        data: response.data 
+      }
+    } catch (e: any) {
+      console.error('Webhook publish error:', e)
+      if (e.code === 'ECONNABORTED' || e.message?.includes('timeout')) {
+        return { success: false, error: 'Request Timeout (120s)' }
+      }
+      return { 
+        success: false, 
+        error: e.response?.data ? JSON.stringify(e.response.data) : e.message,
+        status: e.response?.status
+      }
+    }
+  })
 }

@@ -15,11 +15,11 @@ export function ArticleSocialContent({ socialContent, setSocialContent, generati
         <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Social Content (FB/LinkedIn)</h3>
         <button 
           className="btn-ghost" 
-          style={{ fontSize: 12, color: 'var(--brand-primary)', gap: 6 }}
+          style={{ fontSize: 11, color: 'var(--brand-primary)', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(99,102,241,0.05)' }}
           onClick={onGenSocial}
           disabled={generating}
         >
-          {generating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+          {generating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
           AI Social Content
         </button>
       </div>
