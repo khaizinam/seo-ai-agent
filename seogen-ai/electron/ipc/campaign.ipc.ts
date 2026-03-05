@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { ipcMain, dialog } from 'electron'
 import Store from 'electron-store'
 import axios from 'axios'
 import { CampaignRepository } from '../repositories/campaign.repository'
@@ -277,6 +277,110 @@ Yêu cầu các bài MỚI:
       }
 
       return { success: true, count: rows.length }
+    } catch (err: any) {
+      return { success: false, error: err.message }
+    }
+  })
+
+  // ─── Export Campaign Report as .md ───
+  ipcMain.handle('campaign:exportReport', async (_e, campaignId: number) => {
+    try {
+      const { getKnex } = await import('../services/db/knex.service')
+      const db = getKnex()
+
+      // Gather data
+      const campaign = await db('campaigns').where({ id: campaignId }).first()
+      if (!campaign) return { success: false, error: 'Campaign not found' }
+
+      const keywords = await db('keywords').where({ campaign_id: campaignId }).orderBy('intent')
+      const articles = await db('articles').where({ campaign_id: campaignId }).orderBy('week_number').orderBy('article_type')
+
+      // Build markdown
+      const lines: string[] = []
+      lines.push(`# Campaign Report: ${campaign.name}`)
+      lines.push('')
+      lines.push('## Campaign Overview')
+      lines.push('')
+      lines.push(`- **Name:** ${campaign.name}`)
+      lines.push(`- **Description:** ${campaign.description || 'N/A'}`)
+      lines.push(`- **Status:** ${campaign.status || 'active'}`)
+      lines.push(`- **Duration:** ${campaign.duration_value || 4} ${campaign.duration_type || 'weeks'}`)
+      lines.push(`- **Articles per week:** ${campaign.articles_per_week || 4}`)
+      lines.push(`- **Total keywords:** ${keywords.length}`)
+      lines.push(`- **Total planned articles:** ${articles.length}`)
+      lines.push('')
+
+      // Keywords by intent
+      lines.push('## Keywords by Intent')
+      lines.push('')
+      const intentGroups: Record<string, typeof keywords> = {}
+      for (const kw of keywords) {
+        const intent = kw.intent || 'informational'
+        if (!intentGroups[intent]) intentGroups[intent] = []
+        intentGroups[intent].push(kw)
+      }
+      for (const [intent, kws] of Object.entries(intentGroups)) {
+        lines.push(`### ${intent.charAt(0).toUpperCase() + intent.slice(1)} (${kws.length})`)
+        lines.push('')
+        for (const kw of kws) {
+          const meta = []
+          if (kw.volume) meta.push(`volume: ${kw.volume}`)
+          if (kw.difficulty) meta.push(`difficulty: ${kw.difficulty}`)
+          lines.push(`- ${kw.keyword}${meta.length ? ` *(${meta.join(', ')})*` : ''}`)
+        }
+        lines.push('')
+      }
+
+      // Articles by week
+      lines.push('## Content Plan by Week')
+      lines.push('')
+      const weekGroups: Record<number, typeof articles> = {}
+      for (const art of articles) {
+        const wk = art.week_number || 1
+        if (!weekGroups[wk]) weekGroups[wk] = []
+        weekGroups[wk].push(art)
+      }
+      for (const [week, arts] of Object.entries(weekGroups).sort(([a], [b]) => +a - +b)) {
+        lines.push(`### Week ${week}`)
+        lines.push('')
+        lines.push('| # | Type | Title | Keyword | Status |')
+        lines.push('|---|------|-------|---------|--------|')
+        for (let i = 0; i < arts.length; i++) {
+          const art = arts[i]
+          const type = art.article_type === 'pillar' ? '**PILLAR**' : 'Satellite'
+          const kw = art.keyword || '-'
+          const status = art.status || 'draft'
+          lines.push(`| ${i + 1} | ${type} | ${art.title} | ${kw} | ${status} |`)
+        }
+        lines.push('')
+      }
+
+      // Footer
+      lines.push('---')
+      lines.push(`*Generated on ${new Date().toISOString().split('T')[0]} by SEOGen AI*`)
+      lines.push('')
+
+      const mdContent = lines.join('\n')
+
+      // Show save dialog
+      const slugName = campaign.name.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').toLowerCase()
+      const result = await dialog.showSaveDialog({
+        title: 'Export Campaign Report',
+        defaultPath: `campaign_report_${slugName}.md`,
+        filters: [
+          { name: 'Markdown', extensions: ['md'] },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+      })
+
+      if (result.canceled || !result.filePath) {
+        return { success: false, error: 'cancelled' }
+      }
+
+      const fs = await import('fs')
+      fs.writeFileSync(result.filePath, mdContent, 'utf-8')
+
+      return { success: true, filePath: result.filePath }
     } catch (err: any) {
       return { success: false, error: err.message }
     }

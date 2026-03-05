@@ -1,6 +1,17 @@
 import { ipcMain } from 'electron'
 import Store from 'electron-store'
-import { connectDB, runMigrations, DBConfig } from '../services/db/knex.service'
+import { connectDB, runMigrations, getKnex, DBConfig } from '../services/db/knex.service'
+import { DEFAULT_PERSONAS } from '../lib/persona-seeds'
+
+async function seedPersonasIfEmpty() {
+  try {
+    const db = getKnex()
+    const count = await db('personas').count('id as cnt').first()
+    if (!count || Number(count.cnt) === 0) {
+      await db('personas').insert(DEFAULT_PERSONAS)
+    }
+  } catch { /* table may not exist yet */ }
+}
 
 export function registerDbIpc(store: Store) {
   // Test & save DB connection
@@ -11,6 +22,7 @@ export function registerDbIpc(store: Store) {
       // Run migrations on successful connect
       try {
         await runMigrations(store)
+        await seedPersonasIfEmpty()
       } catch (err: unknown) {
         const error = err as Error
         return { success: true, message: result.message, migrationWarning: error.message }
@@ -33,7 +45,14 @@ export function registerDbIpc(store: Store) {
   ipcMain.handle('db:reconnect', async () => {
     const config = store.get('dbConfig') as DBConfig | undefined
     if (!config) return { success: false, message: 'Chưa có cấu hình DB' }
-    return await connectDB(config)
+    const result = await connectDB(config)
+    if (result.success) {
+      try {
+        await runMigrations(store)
+        await seedPersonasIfEmpty()
+      } catch { /* ignore */ }
+    }
+    return result
   })
 
   // Full reset (Drop & Migrate)

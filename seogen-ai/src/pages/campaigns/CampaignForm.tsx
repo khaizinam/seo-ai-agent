@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, FileDown, Loader2 } from 'lucide-react'
+import { invoke } from '../../lib/api'
+import { useAppStore } from '../../stores/app.store'
 import CampaignDetailsTab from '../../components/campaigns/CampaignDetailsTab'
 import CampaignPlanTab from '../../components/campaigns/CampaignPlanTab'
 
@@ -8,11 +10,32 @@ export default function CampaignForm() {
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
   const isEdit = !!id
+  const { setToast } = useAppStore()
 
   const [activeTab, setActiveTab] = useState<'details' | 'plan'>('details')
+  const [exporting, setExporting] = useState(false)
 
   const handleCancel = () => {
     navigate('/campaign')
+  }
+
+  const handleExportReport = async () => {
+    if (!id) return
+    setExporting(true)
+    try {
+      const res = await invoke<{ success: boolean; filePath?: string; error?: string }>('campaign:exportReport', +id)
+      if (res.success) {
+        setToast({ message: `Đã xuất báo cáo: ${res.filePath}`, type: 'success' })
+      } else if (res.error === 'cancelled') {
+        // User cancelled save dialog — do nothing
+      } else {
+        setToast({ message: res.error || 'Lỗi khi xuất báo cáo', type: 'error' })
+      }
+    } catch (e: any) {
+      setToast({ message: e.message, type: 'error' })
+    } finally {
+      setExporting(false)
+    }
   }
 
   return (
@@ -30,6 +53,17 @@ export default function CampaignForm() {
               {isEdit ? 'Cập nhật thông tin chiến dịch SEO' : 'Điền thông tin để tạo chiến dịch từ khoá mới'}
             </p>
         </div>
+        {isEdit && (
+          <button
+            className="btn-secondary"
+            onClick={handleExportReport}
+            disabled={exporting}
+            style={{ fontSize: 12, gap: 6 }}
+          >
+            {exporting ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
+            Xuất báo cáo .md
+          </button>
+        )}
       </div>
 
       {isEdit && (

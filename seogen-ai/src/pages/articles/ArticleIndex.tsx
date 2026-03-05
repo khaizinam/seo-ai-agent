@@ -4,7 +4,7 @@ import { invoke } from '../../lib/api'
 import { DataTable, ColumnDef, PaginationState, SortState } from '../../components/ui/DataTable'
 import { TableFilter } from '../../components/ui/TableFilter'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
-import { Edit2, Trash2, Plus, Eye, Loader2 } from 'lucide-react'
+import { Edit2, Trash2, Plus } from 'lucide-react'
 import { useTableState } from '../../hooks/useTableState'
 
 interface Article { 
@@ -38,7 +38,6 @@ export default function ArticleIndex() {
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   
-  const [viewArticle, setViewArticle] = useState<{ html: string; title: string } | null>(null)
 
   // Applied filter (persisted)
   const [appliedFilter, setAppliedFilter] = useTableState('article_filter', {
@@ -134,18 +133,7 @@ export default function ArticleIndex() {
       key: 'actions', title: 'Thao tác', align: 'right', width: 140,
       render: a => (
         <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-          <button 
-            className="btn-ghost" 
-            style={{ padding: 6, color: 'var(--brand-primary)', borderRadius: 6, width: 28, height: 28 }}
-            onClick={async () => {
-              const full = await invoke<{ content_html?: string; title?: string }>('article:get', a.id)
-              setViewArticle({ html: full?.content_html || '', title: full?.title || a.title })
-            }}
-            title="Đọc thử"
-          >
-            <Eye size={14} />
-          </button>
-          
+
           <button 
             className="btn-ghost" 
             style={{ padding: 6, color: 'var(--success)', borderRadius: 6, width: 28, height: 28 }}
@@ -220,20 +208,6 @@ export default function ArticleIndex() {
         onCancel={() => setDeleteItem(null)}
       />
 
-      {/* Article viewer modal */}
-      {viewArticle && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ width: '85vw', maxWidth: 860, height: '85vh', display: 'flex', flexDirection: 'column' }} className="glass-card">
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 600 }}>{viewArticle.title}</span>
-              <button className="btn-ghost" onClick={() => setViewArticle(null)}>✕</button>
-            </div>
-            <div style={{ flex: 1, overflow: 'auto', padding: 24, background: '#fff', borderRadius: '0 0 10px 10px' }}>
-              <div style={{ color: '#1a1a1a', lineHeight: 1.8, fontFamily: 'Georgia, serif' }} dangerouslySetInnerHTML={{ __html: viewArticle.html }} />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

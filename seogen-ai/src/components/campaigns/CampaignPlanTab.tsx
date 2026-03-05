@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { invoke } from '../../lib/api'
 import { useAppStore } from '../../stores/app.store'
 import { Loader2, Sparkles, Plus } from 'lucide-react'
+import { AIProcessingOverlay } from '../../components/ui/AIProcessingOverlay'
 import { useNavigate } from 'react-router-dom'
 
 export interface PlannedArticle {
@@ -40,6 +41,8 @@ export default function CampaignPlanTab({ campaignId }: Props) {
   const [showWriteModal, setShowWriteModal] = useState<PlannedArticle | null>(null)
   const [writingContent, setWritingContent] = useState(false)
   const [viewArticle, setViewArticle] = useState<{ html: string; title: string } | null>(null)
+  const [aiOverlayVisible, setAiOverlayVisible] = useState(false)
+  const [aiOverlayStep, setAiOverlayStep] = useState('')
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
@@ -77,6 +80,8 @@ export default function CampaignPlanTab({ campaignId }: Props) {
   const handleGenerateContentPlan = async () => {
     if (!campData || !campData.name) return
     setPlanLoading(true)
+    setAiOverlayVisible(true)
+    setAiOverlayStep('Đang lập kế hoạch nội dung SEO...')
     try {
       const res = await invoke<{ success: boolean; count?: number; error?: string }>('campaign:generateContentPlan', {
         id: +campaignId,
@@ -96,12 +101,15 @@ export default function CampaignPlanTab({ campaignId }: Props) {
       setToast({ message: e.message, type: 'error' })
     } finally {
       setPlanLoading(false)
+      setAiOverlayVisible(false)
     }
   }
 
   const handleWriteArticle = async () => {
     if (!showWriteModal || !selectedPersonaId) return
     setWritingContent(true)
+    setAiOverlayVisible(true)
+    setAiOverlayStep(`Đang viết bài: "${showWriteModal.title}"...`)
     try {
       const res = await invoke<{ success: boolean; content?: string; error?: string }>('article:generateFullContent', {
         articleId: showWriteModal.id,
@@ -118,6 +126,7 @@ export default function CampaignPlanTab({ campaignId }: Props) {
       setToast({ message: e.message, type: 'error' })
     } finally {
       setWritingContent(false)
+      setAiOverlayVisible(false)
     }
   }
 
@@ -347,6 +356,12 @@ export default function CampaignPlanTab({ campaignId }: Props) {
           </div>
         </div>
       )}
+
+      <AIProcessingOverlay
+        visible={aiOverlayVisible}
+        stepLabel={aiOverlayStep}
+        onCancel={() => { setAiOverlayVisible(false); setPlanLoading(false); setWritingContent(false) }}
+      />
     </>
   )
 }

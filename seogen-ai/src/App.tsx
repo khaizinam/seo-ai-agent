@@ -71,7 +71,7 @@ function SetupPrompt() {
 }
 
 export default function App() {
-  const { dbConnected, setDbConnected, theme, setTheme } = useAppStore()
+  const { dbConnected, setDbConnected, theme, setTheme, setOutputLanguage } = useAppStore()
 
   useEffect(() => {
     // Auto-reconnect DB on startup
@@ -80,10 +80,13 @@ export default function App() {
       setDbConnected(r.success)
     })
 
-    // Load theme from settings
+    // Load theme and outputLanguage from settings
     window.api.invoke('settings:getAll').then((res: any) => {
       if (res?.theme) {
         setTheme(res.theme)
+      }
+      if (res?.outputLanguage) {
+        setOutputLanguage(res.outputLanguage)
       }
     })
   }, [])

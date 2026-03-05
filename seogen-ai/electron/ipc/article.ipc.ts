@@ -2,6 +2,8 @@ import { ipcMain } from 'electron'
 import Store from 'electron-store'
 import axios from 'axios'
 import { getKnex } from '../services/db/knex.service'
+import { buildFullArticlePrompt } from '../lib/prompts'
+import { DEFAULT_PERSONAS } from '../lib/persona-seeds'
 
 export function registerArticleIpc(store: Store) {
   // ---------- PERSONAS ----------
@@ -28,6 +30,29 @@ export function registerArticleIpc(store: Store) {
     const db = getKnex()
     await db('personas').where({ id }).delete()
     return { success: true }
+  })
+
+  // Seed default personas (only if table is empty)
+  ipcMain.handle('persona:seedDefaults', async () => {
+    const db = getKnex()
+    const count = await db('personas').count('id as cnt').first()
+    if (count && Number(count.cnt) > 0) {
+      return { success: false, message: 'Bảng personas đã có dữ liệu. Dùng Reset để seed lại.' }
+    }
+    await db('personas').insert(DEFAULT_PERSONAS)
+    return { success: true, count: DEFAULT_PERSONAS.length }
+  })
+
+  // Reset personas to default seeds (truncate + re-seed)
+  ipcMain.handle('persona:resetToDefaults', async () => {
+    const db = getKnex()
+    try {
+      await db('personas').del()
+      await db('personas').insert(DEFAULT_PERSONAS)
+      return { success: true, count: DEFAULT_PERSONAS.length }
+    } catch (err: any) {
+      return { success: false, error: err.message }
+    }
   })
 
   // ---------- ARTICLES ----------
@@ -179,30 +204,13 @@ export function registerArticleIpc(store: Store) {
 
     if (!article || !persona) return { success: false, error: 'Không tìm thấy bài viết hoặc nhân vật' }
 
-    const prompt = `Bạn là một chuyên gia viết bài SEO. Hãy viết một bài viết hoàn chỉnh dựa trên các thông tin sau:
-Nhân vật viết bài (Persona): "${persona.name}" - ${persona.description}
-Phong cách viết: ${persona.writing_style}
-Giọng văn: ${persona.tone}
-
-Thông tin chiến dịch:
-Tên chiến dịch: "${campaign?.name}"
-Mô tả: "${campaign?.description}"
-
-Thông tin bài viết:
-Tiêu đề: "${article.title}"
-Từ khoá chính: "${article.keyword || article.title}"
-Mô tả (Meta Description): "${article.meta_description}"
-
-Yêu cầu về nội dung:
-1. Độ dài: 1000 - 2000 từ.
-2. Cấu trúc bài viết mạch lạc, sử dụng các thẻ tiêu đề H2-H6. KHÔNG sử dụng thẻ H1 (vì H1 đã được dùng cho tiêu đề trang).
-3. KHÔNG sử dụng Table of Contents hoặc phần mở đầu giới thiệu về blog. Tập trung thẳng vào nội dung.
-4. KHÔNG sử dụng Markdown. CHỈ sử dụng HTML thuần túy.
-5. Chỉ sử dụng các thẻ: <h2>, <h3>, <h4>, <h5>, <h6>, <p>, <a>, <strong>. KHÔNG sử dụng các thẻ danh sách như <ul>, <ol>, <li>.
-6. Thay vì dùng danh sách (ul/li), hãy trình bày các ý dưới dạng các đoạn văn (p) hoặc tiêu đề con.
-7. Output phải là mã HTML nén (minified), không có khoảng trắng thừa, không có xuống dòng giữa các thẻ.
-
-Hãy chỉ trả về nội dung bên trong cặp thẻ <div>...</div>.`
+    const lang = (store.get('outputLanguage') as string) || 'Vietnamese'
+    const prompt = buildFullArticlePrompt(
+      persona,
+      campaign,
+      { title: article.title, keyword: article.keyword || article.title, meta_description: article.meta_description },
+      lang
+    )
 
     try {
       const activeProfile = config.profiles?.find((p: any) => p.active)

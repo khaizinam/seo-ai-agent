@@ -1,16 +1,23 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom'
-import { invoke } from '../../lib/api'
+import { invoke, listen } from '../../lib/api'
+import {
+  buildArticleSystemPrompt, buildArticleUserPrompt,
+  buildSocialSystemPrompt, buildSocialUserPrompt,
+  buildThumbnailSystemPrompt, buildThumbnailUserPrompt,
+  stripHtmlToText
+} from '../../lib/prompts'
 import { Loader2, ArrowLeft } from 'lucide-react'
 import { useAppStore } from '../../stores/app.store'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { AIProcessingOverlay } from '../../components/ui/AIProcessingOverlay'
 import { ArticleContentEditor } from './components/ArticleContentEditor'
 import { ArticleSeoMeta } from './components/ArticleSeoMeta'
 import { ArticleSocialContent } from './components/ArticleSocialContent'
 import { ArticleThumbnailPrompt } from './components/ArticleThumbnailPrompt'
 import { ArticleSidebar } from './components/ArticleSidebar'
 
-interface Campaign { id: number; name: string }
+interface Campaign { id: number; name: string; description?: string }
 interface Persona { id: number; name: string }
 interface Keyword { id: number; keyword: string }
 interface Article { 
@@ -37,7 +44,7 @@ export default function ArticleForm() {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
   const plannedId = searchParams.get('plannedId')
-  const { setToast } = useAppStore()
+  const { setToast, outputLanguage } = useAppStore()
 
   const isEdit = !!id
 
@@ -62,6 +69,29 @@ export default function ArticleForm() {
   const [loadingContent, setLoadingContent] = useState(false)
   const [activeTab, setActiveTab] = useState<'html' | 'context'>('context')
   const [showGenFullConfirm, setShowGenFullConfirm] = useState(false)
+
+  // AI Overlay state
+  const [aiOverlayVisible, setAiOverlayVisible] = useState(false)
+  const [aiOverlayStep, setAiOverlayStep] = useState('')
+  const [aiOverlaySub, setAiOverlaySub] = useState('')
+  const abortRef = useRef(false)
+
+  // Listen for model-switch events from backend
+  useEffect(() => {
+    const unsub = listen('ai:model-switched', (...args: unknown[]) => {
+      const data = args[0] as { fromName: string; fromModel: string; toName: string; toModel: string }
+      setAiOverlaySub(`${data.fromName} (${data.fromModel}) hết limit → Chuyển sang ${data.toName} (${data.toModel})`)
+    })
+    return unsub
+  }, [])
+
+  const cancelAiProcess = () => {
+    abortRef.current = true
+    setAiOverlayVisible(false)
+    setAiOverlaySub('')
+    setGenerating(false)
+    setToast({ message: 'Đã huỷ tiến trình AI', type: 'info' })
+  }
 
   // ─── Data Loading ───
   const loadDependencies = useCallback(async () => {
@@ -150,24 +180,23 @@ export default function ArticleForm() {
         if (!res.success) throw new Error(res.error || 'Lỗi khi tạo bài viết')
         setContentHtml(res.content)
         if (!silent) setToast({ message: 'Đã tạo xong bài viết từ kế hoạch', type: 'success' })
+        // Auto-save
+        await silentSave({ contentHtml: res.content })
         return res.content
       } else {
         const kw = keywords.find(k => k.id === +selKeyword)
         const persona = personas.find(p => p.id === +selPersona)
         if (!kw) throw new Error('Vui lòng chọn từ khóa')
 
-        const systemPrompt = persona
-          ? `Bạn là ${persona.name}. Viết bài SEO chuyên nghiệp, tự nhiên theo phong cách của bạn.`
-          : 'Bạn là chuyên gia SEO content writer. Viết bài chuẩn SEO, tự nhiên, hấp dẫn.'
-
-        const userPrompt = `Viết bài SEO đầy đủ về từ khoá: "${kw.keyword}"
-${title ? `Tiêu đề: ${title}` : ''}
-Yêu cầu:
-- Định dạng HTML nén (không cần <html><body>, chỉ nội dung nội tại)
-- Có H2-H6 phù hợp. Tuyệt đối KHÔNG sử dụng thẻ H1. KHÔNG sử dụng các thẻ danh sách <ul>, <ol>, <li>.
-- Thay thế các danh sách bằng các đoạn văn (p) trình bày mạch lạc.
-- Độ dài 1000-1500 từ. Mật độ từ khoá 1-2%. Văn phong tự nhiên.
-- Output là mã HTML nén (minified). Chỉ trả về mã HTML, không markdown, không giải thích.`
+        const lang = outputLanguage || 'Vietnamese'
+        const campaign = campaigns.find(c => c.id === +selCampaign)
+        const relatedKws = keywords.map(k => k.keyword).join(', ')
+        const systemPrompt = buildArticleSystemPrompt(persona?.name, lang)
+        const userPrompt = buildArticleUserPrompt(kw.keyword, title, lang, {
+          campaignName: campaign?.name,
+          campaignDescription: campaign?.description,
+          relatedKeywords: relatedKws,
+        })
 
         const res = await invoke<{ success: boolean; content: string; error?: string }>('ai:generate', {
           messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
@@ -176,6 +205,8 @@ Yêu cầu:
         setContentHtml(res.content)
         if (!title) setTitle(`Bài về: ${kw.keyword}`)
         if (!silent) setToast({ message: 'AI đã viết xong bài viết', type: 'success' })
+        // Auto-save immediately to prevent data loss
+        await silentSave({ contentHtml: res.content, title: title || `Bài về: ${kw.keyword}` })
         return res.content
       }
     } catch (e: any) {
@@ -197,22 +228,20 @@ Yêu cầu:
     try {
       const persona = personas.find(p => p.id === +selPersona)
       const kw = keywords.find(k => k.id === +selKeyword) || { keyword: title }
-      const systemPrompt = persona
-        ? `Bạn là ${persona.name}. Hãy viết nội dung quảng bá bài viết.`
-        : 'Bạn là chuyên gia Social Media Marketing.'
-      const baseUserPrompt = `Dựa trên bài viết SEO: "${title || kw.keyword}"
-Nội dung bài viết: ${html.substring(0, 2000)}
-Yêu cầu:
-1. Sử dụng icon năng động, kèm hashtags.
-2. Phong cách viết theo nhân vật: ${persona?.name || 'Chuyên gia'}.
-3. CHỈ trả về nội dung bài viết, không giải thích gì thêm.`
+      const lang = outputLanguage || 'Vietnamese'
+      const campaign = campaigns.find(c => c.id === +selCampaign)
+      const systemPrompt = buildSocialSystemPrompt(persona?.name, lang)
+      const personaLabel = persona?.name || 'Expert'
+      const articleTitle = title || kw.keyword
+      const snippet = stripHtmlToText(html, 1500)
+      const campaignCtx = campaign ? `\nCampaign: "${campaign.name}" — ${campaign.description || ''}` : ''
 
       const [resFb, resLi] = await Promise.all([
         invoke<{ success: boolean; content: string; error?: string }>('ai:generate', {
-          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: `${baseUserPrompt}\n\nNền tảng: Facebook.` }],
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: buildSocialUserPrompt(articleTitle, snippet, personaLabel, 'Facebook', lang) }],
         }),
         invoke<{ success: boolean; content: string; error?: string }>('ai:generate', {
-          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: `${baseUserPrompt}\n\nNền tảng: LinkedIn.` }],
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: buildSocialUserPrompt(articleTitle, snippet, personaLabel, 'LinkedIn', lang) }],
         }),
       ])
 
@@ -221,6 +250,8 @@ Yêu cầu:
       if (resLi.success) newSocial.push({ social_type: 'linkedin', content: resLi.content.trim() })
       setSocialContent(newSocial)
       if (!silent) setToast({ message: 'Đã tạo xong nội dung Social', type: 'success' })
+      // Auto-save
+      await silentSave({ socialContent: newSocial })
       return true
     } catch (e: any) {
       if (!silent) setToast({ message: e.message, type: 'error' })
@@ -240,23 +271,18 @@ Yêu cầu:
     if (!silent) setGenerating(true)
     try {
       const kw = keywords.find(k => k.id === +selKeyword) || { keyword: title }
+      const articleTitle = title || kw.keyword
       const res = await invoke<{ success: boolean; content: string; error?: string }>('ai:generate', {
         messages: [
-          { role: 'system', content: 'Bạn là chuyên gia thiết kế hình ảnh và Prompt Engineer cho các AI tạo ảnh như Midjourney, DALL-E 3.' },
-          { role: 'user', content: `Dựa trên bài viết SEO: "${title || kw.keyword}"
-Nội dung bài viết: ${html.substring(0, 3000)}
-
-Yêu cầu:
-1. Hãy tạo 1 prompt tiếng Anh chuyên sâu để tạo ảnh thumbnail cho bài viết này.
-2. Ảnh phải thu hút, phản ánh đúng chủ đề, phong cách nghệ thuật phù hợp.
-3. Thêm các từ khoá mô tả ánh sáng, góc chụp, chi tiết (cinematic, high detail, 8k, digital art).
-4. Prompt phải tập trung vào hình ảnh, KHÔNG chứa chữ (no text).
-Chỉ trả về đoạn Prompt tiếng Anh, không giải thích.` },
+          { role: 'system', content: buildThumbnailSystemPrompt() },
+          { role: 'user', content: buildThumbnailUserPrompt(articleTitle, stripHtmlToText(html, 1200)) },
         ],
       })
       if (res.success) {
         setThumbnailPrompt(res.content.trim())
         if (!silent) setToast({ message: 'Đã tạo xong Thumbnail Prompt', type: 'success' })
+        // Auto-save
+        await silentSave({ thumbnailPrompt: res.content.trim() })
         return true
       }
       return false
@@ -273,26 +299,71 @@ Chỉ trả về đoạn Prompt tiếng Anh, không giải thích.` },
   async function generateFullProcess() {
     setShowGenFullConfirm(false)
     setGenerating(true)
+    abortRef.current = false
+    setAiOverlaySub('')
+    setAiOverlayVisible(true)
     try {
-      // Step 1: reuse generateArticle → returns HTML string
-      setToast({ message: '⏳ Bước 1/3: Đang sinh nội dung bài viết...', type: 'info' })
+      // Step 1
+      setAiOverlayStep('⏳ Bước 1/3 — Đang sinh nội dung bài viết...')
       const html = await generateArticle(true)
+      if (abortRef.current) return
       if (!html) throw new Error('Không thể tạo nội dung bài viết')
 
-      // Step 2: reuse generateSocialContent → pass html to bypass stale state
-      setToast({ message: '⏳ Bước 2/3: Đang sinh Social Content...', type: 'info' })
+      // Step 2
+      setAiOverlayStep('⏳ Bước 2/3 — Đang sinh Social Content...')
       await generateSocialContent(true, html)
+      if (abortRef.current) return
 
-      // Step 3: reuse generateThumbnailPrompt → same approach
-      setToast({ message: '⏳ Bước 3/3: Đang sinh Thumbnail Prompt...', type: 'info' })
+      // Step 3
+      setAiOverlayStep('⏳ Bước 3/3 — Đang sinh Thumbnail Prompt...')
       await generateThumbnailPrompt(true, html)
+      if (abortRef.current) return
 
+      setAiOverlayStep('🎉 Hoàn tất!')
+      // Auto-save once at the very end (individual steps already auto-saved)
       setToast({ message: '🎉 Đã hoàn thành toàn bộ quy trình AI!', type: 'success' })
     } catch (e: any) {
-      console.error('generateFullProcess error:', e)
-      setToast({ message: `Lỗi quy trình AI: ${e.message}`, type: 'error' })
+      if (!abortRef.current) {
+        console.error('generateFullProcess error:', e)
+        setToast({ message: `Lỗi quy trình AI: ${e.message}`, type: 'error' })
+      }
     } finally {
+      setAiOverlayVisible(false)
       setGenerating(false)
+    }
+  }
+
+  // ─── Individual AI with overlay ───
+  async function handleGenArticle() {
+    abortRef.current = false
+    setAiOverlayVisible(true)
+    setAiOverlayStep('Đang sinh nội dung bài viết...')
+    try {
+      await generateArticle(false)
+    } finally {
+      setAiOverlayVisible(false)
+    }
+  }
+
+  async function handleGenSocial() {
+    abortRef.current = false
+    setAiOverlayVisible(true)
+    setAiOverlayStep('Đang sinh nội dung Social...')
+    try {
+      await generateSocialContent(false)
+    } finally {
+      setAiOverlayVisible(false)
+    }
+  }
+
+  async function handleGenThumb() {
+    abortRef.current = false
+    setAiOverlayVisible(true)
+    setAiOverlayStep('Đang sinh Thumbnail Prompt...')
+    try {
+      await generateThumbnailPrompt(false)
+    } finally {
+      setAiOverlayVisible(false)
     }
   }
 
@@ -372,6 +443,52 @@ Chỉ trả về đoạn Prompt tiếng Anh, không giải thích.` },
     }
   }
 
+  // Silent auto-save after AI generation — accepts overrides for freshly-set React state
+  async function silentSave(overrides?: {
+    contentHtml?: string
+    socialContent?: any[]
+    thumbnailPrompt?: string
+    title?: string
+  }) {
+    const articleId = id || plannedId
+    if (!articleId && !selKeyword) return // can't save without at least a keyword
+    try {
+      const html = overrides?.contentHtml ?? contentHtml
+      const social = overrides?.socialContent ?? socialContent
+      const thumb = overrides?.thumbnailPrompt ?? thumbnailPrompt
+      const ttl = overrides?.title ?? title
+      const textContent = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+
+      if (articleId) {
+        const payload: any = {
+          id: +articleId, title: ttl,
+          content_html: html, content_text: textContent,
+          meta_title: metaTitle, meta_description: metaDescription,
+          content_social: JSON.stringify(social),
+          thumbnail_prompt: thumb,
+        }
+        if (selPersona) payload.persona_id = +selPersona
+        await invoke('article:update', payload)
+      } else {
+        const saved = await invoke<{ id?: number }>('article:create', {
+          keyword_id: selKeyword ? +selKeyword : undefined,
+          campaign_id: selCampaign ? +selCampaign : undefined,
+          persona_id: selPersona ? +selPersona : undefined,
+          title: ttl || 'Không có tiêu đề',
+          content_html: html, content_text: textContent,
+          meta_title: metaTitle, meta_description: metaDescription,
+          content_social: JSON.stringify(social),
+          thumbnail_prompt: thumb,
+          status: 'draft',
+        })
+        if (saved.id) {/* navigate to edit URL so future saves use update */}
+      }
+      setToast({ message: '💾 Đã tự động lưu', type: 'success' })
+    } catch (err) {
+      console.error('Auto-save failed:', err)
+    }
+  }
+
   const handleExit = () => navigate('/article')
 
   // ─── Render ───
@@ -410,7 +527,7 @@ Chỉ trả về đoạn Prompt tiếng Anh, không giải thích.` },
             title={title} setTitle={setTitle}
             activeTab={activeTab} setActiveTab={setActiveTab}
             generating={generating}
-            onGenContent={() => generateArticle(false)}
+            onGenContent={handleGenArticle}
             onMinify={minifyHtmlContent}
             onCopy={handleCopyToClipboard}
           />
@@ -424,14 +541,14 @@ Chỉ trả về đoạn Prompt tiếng Anh, không giải thích.` },
           <ArticleSocialContent
             socialContent={socialContent} setSocialContent={setSocialContent}
             generating={generating}
-            onGenSocial={() => generateSocialContent(false)}
+            onGenSocial={handleGenSocial}
             onCopy={handleCopyToClipboard}
           />
 
           <ArticleThumbnailPrompt
             thumbnailPrompt={thumbnailPrompt} setThumbnailPrompt={setThumbnailPrompt}
             generating={generating}
-            onGenThumb={() => generateThumbnailPrompt(false)}
+            onGenThumb={handleGenThumb}
             onCopy={handleCopyToClipboard}
           />
         </div>
@@ -462,6 +579,13 @@ Chỉ trả về đoạn Prompt tiếng Anh, không giải thích.` },
         onConfirm={generateFullProcess}
         onCancel={() => setShowGenFullConfirm(false)}
         loading={generating}
+      />
+
+      <AIProcessingOverlay
+        visible={aiOverlayVisible}
+        stepLabel={aiOverlayStep}
+        subLabel={aiOverlaySub}
+        onCancel={cancelAiProcess}
       />
     </div>
   )

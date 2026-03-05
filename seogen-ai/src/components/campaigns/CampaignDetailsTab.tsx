@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { invoke } from '../../lib/api'
 import { useAppStore } from '../../stores/app.store'
 import { Save, Loader2, Sparkles, Check } from 'lucide-react'
+import { AIProcessingOverlay } from '../../components/ui/AIProcessingOverlay'
 import KeywordManager from './KeywordManager'
 import CampaignDetails from './CampaignDetails'
 
@@ -62,6 +63,8 @@ export default function CampaignDetailsTab({ campaignId }: Props) {
   const [suggestedKws, setSuggestedKws] = useState<{keyword: string, intent: string}[]>([])
   const [showAiModal, setShowAiModal] = useState(false)
   const [aiSuggestingTime, setAiSuggestingTime] = useState(false)
+  const [aiOverlayVisible, setAiOverlayVisible] = useState(false)
+  const [aiOverlayStep, setAiOverlayStep] = useState('')
 
   useEffect(() => {
     if (!isEdit) return
@@ -148,6 +151,8 @@ export default function CampaignDetailsTab({ campaignId }: Props) {
   const handleAiSuggest = async () => {
     if (!form.name.trim()) return alert('Vui lòng nhập tên chiến dịch trước')
     setAiLoading(true)
+    setAiOverlayVisible(true)
+    setAiOverlayStep('Đang phân tích và đề xuất từ khoá...')
     try {
       const res = await invoke<{ success: boolean; keywords?: any[]; error?: string }>('campaign:aiSuggestKeywords', {
         id: campaignId ? +campaignId : 0,
@@ -164,12 +169,15 @@ export default function CampaignDetailsTab({ campaignId }: Props) {
       setToast({ message: e.message, type: 'error' })
     } finally {
       setAiLoading(false)
+      setAiOverlayVisible(false)
     }
   }
 
   const handleAiSuggestTime = async () => {
     if (!form.name.trim()) return alert('Vui lòng nhập tên chiến dịch trước')
     setAiSuggestingTime(true)
+    setAiOverlayVisible(true)
+    setAiOverlayStep('Đang tính toán thời gian và mật độ phù hợp...')
     try {
       const combinedKws = [...navKws, ...infoKws].join(', ')
       const res = await invoke<{ success: boolean; duration_value?: number; articles_per_week?: number; error?: string }>('campaign:aiSuggestTime', {
@@ -187,6 +195,7 @@ export default function CampaignDetailsTab({ campaignId }: Props) {
       setToast({ message: e.message, type: 'error' })
     } finally {
       setAiSuggestingTime(false)
+      setAiOverlayVisible(false)
     }
   }
 
@@ -400,6 +409,12 @@ export default function CampaignDetailsTab({ campaignId }: Props) {
           </div>
         </div>
       )}
+
+      <AIProcessingOverlay
+        visible={aiOverlayVisible}
+        stepLabel={aiOverlayStep}
+        onCancel={() => { setAiOverlayVisible(false); setAiLoading(false); setAiSuggestingTime(false) }}
+      />
     </div>
   )
 }

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { invoke } from '../lib/api'
+import { buildPersonaPreviewSystemPrompt, buildPersonaPreviewUserPrompt } from '../lib/prompts'
+import { useAppStore } from '../stores/app.store'
 import { Plus, Trash2, Edit2, X, Save, Loader2, Wand2 } from 'lucide-react'
 
 interface Persona { id: number; name: string; description: string; writing_style: string; tone: string; example_text: string; prompt_template: string }
@@ -12,6 +14,7 @@ export default function PersonaPage() {
   const [previewing, setPreviewing] = useState<number | null>(null)
   const [previewText, setPreviewText] = useState('')
   const [previewLoading, setPreviewLoading] = useState(false)
+  const { outputLanguage } = useAppStore()
 
   const load = async () => { setPersonas(await invoke<Persona[]>('persona:list') || []) }
   useEffect(() => { load() }, [])
@@ -32,11 +35,12 @@ export default function PersonaPage() {
 
   async function previewPersona(p: Persona) {
     setPreviewing(p.id); setPreviewText(''); setPreviewLoading(true)
+    const lang = outputLanguage || 'Vietnamese'
     const res = await invoke<{ success: boolean; content: string }>('ai:generate', {
       provider: 'gemini',
       messages: [
-        { role: 'system', content: p.prompt_template || `Bạn là ${p.name}. Phong cách: ${p.writing_style}. Giọng điệu: ${p.tone}.` },
-        { role: 'user', content: `Viết 2-3 câu mẫu về chủ đề "tối ưu SEO website" theo đúng phong cách của bạn.` },
+        { role: 'system', content: buildPersonaPreviewSystemPrompt(p, lang) },
+        { role: 'user', content: buildPersonaPreviewUserPrompt(lang) },
       ],
     })
     setPreviewText(res.success ? res.content : 'Lỗi: ' + res.content)

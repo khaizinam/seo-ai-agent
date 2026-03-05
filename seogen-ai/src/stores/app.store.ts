@@ -9,6 +9,8 @@ interface AppStore {
   setIsGenerating: (v: boolean) => void
   theme: 'light' | 'dark' | 'auto'
   setTheme: (v: 'light' | 'dark' | 'auto') => void
+  outputLanguage: string
+  setOutputLanguage: (v: string) => void
   toast: { message: string, type: 'success' | 'error' | 'info' } | null
   setToast: (toast: { message: string, type: 'success' | 'error' | 'info' } | null) => void
 }
@@ -22,6 +24,8 @@ export const useAppStore = create<AppStore>((set) => ({
   setIsGenerating: (isGenerating) => set({ isGenerating }),
   theme: 'dark',
   setTheme: (theme) => set({ theme }),
+  outputLanguage: 'Vietnamese',
+  setOutputLanguage: (outputLanguage) => set({ outputLanguage }),
   toast: null,
   setToast: (toast) => {
     set({ toast })
@@ -30,3 +34,4 @@ export const useAppStore = create<AppStore>((set) => ({
     }
   },
 }))
+

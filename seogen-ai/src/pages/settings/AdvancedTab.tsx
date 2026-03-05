@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { invoke } from '../../lib/api'
-import { AlertTriangle, RefreshCw, Loader2, Trash2, ShieldAlert, ZapOff } from 'lucide-react'
+import { useAppStore } from '../../stores/app.store'
+import { AlertTriangle, RefreshCw, Loader2, Trash2, ShieldAlert, ZapOff, Users } from 'lucide-react'
 
 export default function AdvancedTab() {
+  const { setToast } = useAppStore()
   const [resetLoading, setResetLoading] = useState(false)
   const [showConfirmReset, setShowConfirmReset] = useState(false)
   const [resetCountdown, setResetCountdown] = useState(0)
@@ -15,8 +17,19 @@ export default function AdvancedTab() {
   const [showUninstallModal, setShowUninstallModal] = useState(false)
   const [keepSettings, setKeepSettings] = useState(true)
 
+  // Persona states
+  const [personas, setPersonas] = useState<{id: number; name: string}[]>([])
+  const [defaultPersonaId, setDefaultPersonaId] = useState<string>('')
+  const [showResetPersonaModal, setShowResetPersonaModal] = useState(false)
+  const [personaResetLoading, setPersonaResetLoading] = useState(false)
+
   useEffect(() => {
     loadCacheSize()
+    loadPersonas()
+    // Load saved default persona
+    invoke<any>('settings:getAll').then(res => {
+      if (res?.defaultPersonaId) setDefaultPersonaId(String(res.defaultPersonaId))
+    })
   }, [])
 
   const loadCacheSize = async () => {
@@ -79,8 +92,85 @@ export default function AdvancedTab() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
+  // Persona helpers
+  const loadPersonas = async () => {
+    const list = await invoke<{id: number; name: string}[]>('persona:list')
+    setPersonas(list || [])
+  }
+
+  const handleDefaultPersonaChange = async (id: string) => {
+    setDefaultPersonaId(id)
+    await invoke('settings:set', { key: 'defaultPersonaId', value: id })
+    setToast({ message: 'Đã cập nhật giọng văn mặc định', type: 'success' })
+  }
+
+  const handleResetPersonas = async () => {
+    setPersonaResetLoading(true)
+    try {
+      const res = await invoke<{success: boolean; count?: number; error?: string}>('persona:resetToDefaults')
+      if (res.success) {
+        setToast({ message: `Đã reset và seed lại ${res.count} giọng văn mặc định`, type: 'success' })
+        await loadPersonas()
+        setDefaultPersonaId('')
+      } else {
+        setToast({ message: res.error || 'Lỗi khi reset', type: 'error' })
+      }
+    } catch (e: any) {
+      setToast({ message: e.message, type: 'error' })
+    } finally {
+      setPersonaResetLoading(false)
+      setShowResetPersonaModal(false)
+    }
+  }
+
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Persona / Writing Style Settings */}
+      <div className="glass-card" style={{ padding: 24 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Users size={18} color="var(--brand-primary)" /> Giọng văn / Persona
+        </h2>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>
+          Chọn giọng văn mặc định khi tạo bài viết. Bạn có thể reset về 20 giọng văn gốc.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label className="label">Giọng văn mặc định</label>
+            <select
+              className="select"
+              value={defaultPersonaId}
+              onChange={e => handleDefaultPersonaChange(e.target.value)}
+            >
+              <option value="">-- Không chọn --</option>
+              {personas.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderRadius: 12, background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.15)' }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Reset giọng văn về mặc định</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                Xóa toàn bộ giọng văn hiện tại và khôi phục lại 20 giọng văn gốc.
+              </div>
+            </div>
+            <button
+              className="btn-secondary"
+              style={{ fontSize: 12, borderColor: 'rgba(245, 158, 11, 0.3)', color: '#f59e0b' }}
+              onClick={() => setShowResetPersonaModal(true)}
+            >
+              <RefreshCw size={13} /> Reset Personas
+            </button>
+          </div>
+
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8 }}>
+            Hiện có <strong>{personas.length}</strong> giọng văn trong hệ thống.
+          </div>
+        </div>
+      </div>
+
       {/* Cache Settings */}
       <div className="glass-card" style={{ padding: 24 }}>
         <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -199,6 +289,34 @@ export default function AdvancedTab() {
                 disabled={resetLoading}
               >
                 {resetLoading ? <Loader2 size={16} className="animate-spin" /> : 'Xác nhận thực hiện'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Persona Reset Confirm Modal */}
+      {showResetPersonaModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div className="glass-card animate-scale-in" style={{ maxWidth: 440, padding: 32, textAlign: 'center' }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(245, 158, 11, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+              <AlertTriangle size={32} color="#f59e0b" />
+            </div>
+            <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Reset giọng văn?</h3>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
+              Hành động này sẽ <strong style={{ color: '#ef4444' }}>xóa toàn bộ giọng văn</strong> mà bạn đã tạo và khôi phục lại 20 giọng văn mặc định ban đầu.
+              <br /><br />
+              <strong>Dữ liệu giọng văn tùy chỉnh sẽ bị mất vĩnh viễn!</strong>
+            </p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setShowResetPersonaModal(false)}>Hủy bỏ</button>
+              <button 
+                className="btn-danger" 
+                style={{ flex: 1, justifyContent: 'center' }} 
+                onClick={handleResetPersonas}
+                disabled={personaResetLoading}
+              >
+                {personaResetLoading ? <Loader2 size={16} className="animate-spin" /> : 'Xác nhận Reset'}
               </button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import Store from 'electron-store'
 import axios from 'axios'
+import { buildMetaGenerationPrompt } from '../lib/prompts'
 
 interface AIProfile {
   id: string
@@ -33,6 +34,192 @@ interface AIGeneratePayload {
   temperature?: number
 }
 
+// ─── Rate limit detection ───
+
+const exhaustedProfileIds = new Set<string>()
+
+function isRateLimitError(err: any): boolean {
+  const status = err?.response?.status
+  if (status === 429) return true
+
+  const msg = (err?.response?.data?.error?.message || err?.message || '').toLowerCase()
+  // Gemini
+  if (msg.includes('resource_exhausted') || msg.includes('quota')) return true
+  // Claude
+  if (msg.includes('rate_limit') || msg.includes('overloaded')) return true
+  // OpenAI
+  if (msg.includes('insufficient_quota') || msg.includes('rate_limit_exceeded')) return true
+
+  return false
+}
+
+function notifyModelSwitch(fromProfile: AIProfile, toProfile: AIProfile, reason: string) {
+  const wins = BrowserWindow.getAllWindows()
+  wins.forEach(w => {
+    w.webContents.send('ai:model-switched', {
+      fromName: fromProfile.name,
+      fromModel: fromProfile.model,
+      toName: toProfile.name,
+      toModel: toProfile.model,
+      reason,
+    })
+  })
+}
+
+// ─── Core generation ───
+
+async function generateWithProvider(payload: AIGeneratePayload, config: AIConfig, profile?: AIProfile): Promise<string> {
+  let provider = payload.provider
+  let apiKey: string | undefined
+  let model: string | undefined
+
+  if (profile) {
+    provider = profile.provider
+    apiKey = profile.apiKey
+    model = payload.model || profile.model
+  } else {
+    // Legacy: find active profile or use config keys
+    const activeProfile = config.profiles?.find(p => p.active)
+    if (activeProfile && !payload.provider) {
+      provider = activeProfile.provider
+      apiKey = activeProfile.apiKey
+      model = payload.model || activeProfile.model
+    } else if (activeProfile && payload.provider === activeProfile.provider) {
+      apiKey = activeProfile.apiKey
+      model = payload.model || activeProfile.model
+    }
+  }
+
+  if (!provider) {
+    throw new Error('No AI provider specified or active profile found.')
+  }
+
+  if (provider === 'gemini') {
+    const key = apiKey || config.geminiKey
+    const actualModel = model || payload.model || config.geminiModel || 'gemini-2.0-flash'
+    const messages = payload.messages
+    const geminiMessages = messages.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }))
+    const systemMsg = messages.find(m => m.role === 'system')
+    const body: Record<string, unknown> = {
+      contents: geminiMessages.filter(m => m.role !== 'system'),
+    }
+    if (systemMsg) {
+      body.systemInstruction = { parts: [{ text: systemMsg.content }] }
+    }
+    const res = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/${actualModel}:generateContent?key=${key}`,
+      body,
+      { timeout: 300000 }
+    )
+    return res.data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  }
+
+  if (provider === 'claude') {
+    const key = apiKey || config.claudeKey
+    const actualModel = model || payload.model || config.claudeModel || 'claude-3-5-sonnet-20241022'
+    const systemMsg = payload.messages.find(m => m.role === 'system')
+    const res = await axios.post(
+      'https://api.anthropic.com/v1/messages',
+      {
+        model: actualModel,
+        max_tokens: payload.maxTokens || 4096,
+        system: systemMsg?.content,
+        messages: payload.messages.filter(m => m.role !== 'system').map(m => ({
+          role: m.role, content: m.content,
+        })),
+      },
+      {
+        headers: {
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        timeout: 300000,
+      }
+    )
+    return res.data.content?.[0]?.text || ''
+  }
+
+  if (provider === 'copilot') {
+    const key = apiKey || config.copilotKey
+    const actualModel = model || payload.model || config.copilotModel || 'gpt-4o'
+    const res = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: actualModel,
+        messages: payload.messages,
+        max_tokens: payload.maxTokens || 4096,
+        temperature: payload.temperature || 0.7,
+      },
+      {
+        headers: { Authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+        timeout: 300000,
+      }
+    )
+    return res.data.choices?.[0]?.message?.content || ''
+  }
+
+  throw new Error(`Provider "${provider}" không được hỗ trợ`)
+}
+
+// ─── Fallback wrapper: tries each profile until one succeeds ───
+
+async function generateWithFallback(
+  payload: AIGeneratePayload,
+  config: AIConfig,
+  store: Store
+): Promise<string> {
+  const autoSwitch = store.get('autoSwitchModel') as boolean
+  const profiles = config.profiles || []
+
+  if (!autoSwitch || profiles.length <= 1) {
+    // No fallback — just use normal generation
+    return generateWithProvider(payload, config)
+  }
+
+  // Sort: active profile first, then others (skip exhausted)
+  const sorted = [
+    ...profiles.filter(p => p.active),
+    ...profiles.filter(p => !p.active),
+  ]
+
+  let lastError: Error | null = null
+
+  for (const profile of sorted) {
+    if (exhaustedProfileIds.has(profile.id)) continue
+
+    try {
+      return await generateWithProvider(payload, config, profile)
+    } catch (err: any) {
+      if (isRateLimitError(err)) {
+        // Mark this profile as exhausted
+        exhaustedProfileIds.add(profile.id)
+        store.set('exhaustedProfiles', Array.from(exhaustedProfileIds))
+
+        // Find next available profile to notify
+        const nextProfile = sorted.find(p => p.id !== profile.id && !exhaustedProfileIds.has(p.id))
+        if (nextProfile) {
+          notifyModelSwitch(profile, nextProfile, `Rate limit: ${err?.response?.status || err.message}`)
+        }
+
+        lastError = err
+        continue
+      }
+      // Non-rate-limit error — don't fallback
+      throw err
+    }
+  }
+
+  throw new Error(
+    `Tất cả AI profile đều đã hết limit. Vui lòng chờ hoặc thêm API key mới. (${lastError?.message || ''})`
+  )
+}
+
+// ─── IPC Registration ───
+
 export function registerAiIpc(store: Store) {
   // Save AI config
   ipcMain.handle('ai:saveConfig', async (_event, config: AIConfig) => {
@@ -44,7 +231,6 @@ export function registerAiIpc(store: Store) {
   ipcMain.handle('ai:getConfig', async () => {
     const config = store.get('aiConfig') as AIConfig | undefined
     if (!config) return null
-    // Mask API keys for display
     return {
       ...config,
       geminiKey: config.geminiKey ? '••••' + config.geminiKey.slice(-6) : '',
@@ -85,13 +271,13 @@ export function registerAiIpc(store: Store) {
     }
   })
 
-  // Generate content (non-streaming)
+  // Generate content (with auto-fallback)
   ipcMain.handle('ai:generate', async (_event, payload: AIGeneratePayload) => {
     const config = store.get('aiConfig') as AIConfig | undefined
     if (!config) return { success: false, error: 'Chưa cấu hình AI API key' }
 
     try {
-      const result = await generateWithProvider(payload, config)
+      const result = await generateWithFallback(payload, config, store)
       return { success: true, content: result }
     } catch (err: unknown) {
       const error = err as Error
@@ -105,24 +291,15 @@ export function registerAiIpc(store: Store) {
     if (!config) return { success: false, error: 'Chưa cấu hình AI API key' }
 
     const provider = (config.defaultProvider || 'gemini') as AIGeneratePayload['provider']
-    const prompt = `Dựa vào bài viết về từ khoá: "${keyword}"
-Tiêu đề bài: "${title}"
-Nội dung tóm tắt: "${content.slice(0, 500)}..."
-
-Hãy tạo:
-1. Meta Title: ≤ 60 ký tự, có từ khoá, hấp dẫn, tự nhiên
-2. Meta Description: ≤ 160 ký tự, mô tả lợi ích, có CTA nhẹ
-
-Chỉ trả về JSON thuần, không markdown:
-{"meta_title": "...", "meta_description": "..."}`
+    const lang = (store.get('outputLanguage') as string) || 'Vietnamese'
+    const prompt = buildMetaGenerationPrompt(keyword, title, content.slice(0, 500), lang)
 
     try {
-      const raw = await generateWithProvider({
+      const raw = await generateWithFallback({
         provider,
         messages: [{ role: 'user', content: prompt }],
-      }, config)
+      }, config, store)
 
-      // Parse JSON from response
       const jsonMatch = raw.match(/\{[\s\S]*\}/)
       if (!jsonMatch) throw new Error('AI không trả về JSON hợp lệ')
       const parsed = JSON.parse(jsonMatch[0])
@@ -132,97 +309,15 @@ Chỉ trả về JSON thuần, không markdown:
       return { success: false, error: error.message }
     }
   })
-}
 
-async function generateWithProvider(payload: AIGeneratePayload, config: AIConfig): Promise<string> {
-  let provider = payload.provider
-  const messages = payload.messages
-  let apiKey: string | undefined
-  let model: string | undefined
+  // Exhausted profiles management
+  ipcMain.handle('ai:getExhaustedProfiles', async () => {
+    return Array.from(exhaustedProfileIds)
+  })
 
-  // Check if we have active profile in new structure
-  const activeProfile = config.profiles?.find(p => p.active)
-  if (activeProfile && !payload.provider) {
-    // If no specific provider requested, use the active profile
-    provider = activeProfile.provider
-    apiKey = activeProfile.apiKey
-    model = payload.model || activeProfile.model
-  } else if (activeProfile && payload.provider === activeProfile.provider) {
-    // If requested provider matches active profile, use profile's key/model
-    apiKey = activeProfile.apiKey
-    model = payload.model || activeProfile.model
-  }
-
-  if (!provider) {
-    throw new Error('No AI provider specified or active profile found.')
-  }
-
-  if (provider === 'gemini') {
-    const key = apiKey || config.geminiKey
-    const actualModel = model || payload.model || config.geminiModel || 'gemini-2.0-flash'
-    const geminiMessages = messages.map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    }))
-    const systemMsg = messages.find(m => m.role === 'system')
-    const body: Record<string, unknown> = {
-      contents: geminiMessages.filter(m => m.role !== 'system'),
-    }
-    if (systemMsg) {
-      body.systemInstruction = { parts: [{ text: systemMsg.content }] }
-    }
-    const res = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
-      body,
-      { timeout: 300000 }
-    )
-    return res.data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-  }
-
-  if (provider === 'claude') {
-    const key = apiKey || config.claudeKey
-    const actualModel = model || payload.model || config.claudeModel || 'claude-3-5-sonnet-20241022'
-    const systemMsg = messages.find(m => m.role === 'system')
-    const res = await axios.post(
-      'https://api.anthropic.com/v1/messages',
-      {
-        model,
-        max_tokens: payload.maxTokens || 4096,
-        system: systemMsg?.content,
-        messages: messages.filter(m => m.role !== 'system').map(m => ({
-          role: m.role, content: m.content,
-        })),
-      },
-      {
-        headers: {
-          'x-api-key': key,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-        },
-        timeout: 300000,
-      }
-    )
-    return res.data.content?.[0]?.text || ''
-  }
-
-  if (provider === 'copilot') {
-    const key = apiKey || config.copilotKey
-    const actualModel = model || payload.model || config.copilotModel || 'gpt-4o'
-    const res = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: actualModel,
-        messages,
-        max_tokens: payload.maxTokens || 4096,
-        temperature: payload.temperature || 0.7,
-      },
-      {
-        headers: { Authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-        timeout: 300000,
-      }
-    )
-    return res.data.choices?.[0]?.message?.content || ''
-  }
-
-  throw new Error(`Provider "${provider}" không được hỗ trợ`)
+  ipcMain.handle('ai:clearExhaustedProfiles', async () => {
+    exhaustedProfileIds.clear()
+    store.set('exhaustedProfiles', [])
+    return { success: true }
+  })
 }

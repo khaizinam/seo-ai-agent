@@ -2,14 +2,44 @@ import { useState, useEffect } from 'react'
 import { invoke } from '../../lib/api'
 import {
   Key, ChevronDown, ChevronUp, Loader2, FolderOpen, Save, 
-  Plus, Edit2, Trash2, CheckCircle2, XCircle, Zap, X
+  Plus, Edit2, Trash2, CheckCircle2, XCircle, Zap, X, RefreshCw, AlertTriangle
 } from 'lucide-react'
 
 const AI_PROVIDERS = [
-  { key: 'gemini', label: 'Google Gemini', placeholder: 'gemini-2.0-flash' },
-  { key: 'claude', label: 'Anthropic Claude', placeholder: 'claude-3-5-sonnet-20241022' },
+  { key: 'gemini', label: 'Google Gemini', placeholder: 'gemini-2.5-flash' },
+  { key: 'claude', label: 'Anthropic Claude', placeholder: 'claude-3-7-sonnet-20250219' },
   { key: 'copilot', label: 'OpenAI / Copilot', placeholder: 'gpt-4o' },
 ]
+
+const PREDEFINED_MODELS: Record<string, {value: string, label: string}[]> = {
+  gemini: [
+    // free plan tier
+    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite - free' },
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash - free' },
+    { value: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite - free' },
+    { value: 'gemini-3.0-flash', label: 'Gemini 3 Flash - free' },
+    // paid plan tier
+    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+    { value: 'gemini-2.0-flash', label: 'Gemini 2 Flash' },
+    { value: 'gemini-2.0-flash-exp', label: 'Gemini 2 Flash Exp' },
+    { value: 'gemini-2.0-flash-lite', label: 'Gemini 2 Flash Lite' },
+    { value: 'gemini-3.0-pro', label: 'Gemini 3 Pro' },
+    { value: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro' },
+  ],
+  claude: [
+    { value: 'claude-3-7-sonnet-20250219', label: 'Claude 3.7 Sonnet - Mới nhất' },
+    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku - Nhanh / Rẻ' },
+    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus - Chuyên sâu' }
+  ],
+  copilot: [
+    { value: 'gpt-4o', label: 'GPT-4o - Đa năng / Tiêu chuẩn' },
+    { value: 'gpt-4o-mini', label: 'GPT-4o Mini - Nhanh / Rẻ' },
+    { value: 'o3-mini', label: 'o3-mini - Suy luận nhanh' },
+    { value: 'o1', label: 'o1 - Suy luận phức tạp' },
+    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' }
+  ]
+}
 
 interface AIProfile {
   id: string
@@ -27,6 +57,8 @@ export default function AIProvidersTab() {
   const [loading, setLoading] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
   const [testing, setTesting] = useState(false)
+  const [autoSwitch, setAutoSwitch] = useState(false)
+  const [exhaustedIds, setExhaustedIds] = useState<string[]>([])
 
   // Legacy state
   const [aiConfig, setAiConfig] = useState<any>({})
@@ -48,16 +80,32 @@ export default function AIProvidersTab() {
         copilotModel: cfg.copilotModel || '',
       })
     }
+    // Load auto-switch setting
+    const settings = await invoke<any>('settings:getAll')
+    if (settings) setAutoSwitch(!!settings.autoSwitchModel)
+    // Load exhausted profiles
+    const exh = await invoke<string[]>('ai:getExhaustedProfiles')
+    if (exh) setExhaustedIds(exh)
   }
 
   useEffect(() => { load() }, [])
+
+  const handleToggleAutoSwitch = async (val: boolean) => {
+    setAutoSwitch(val)
+    await invoke('settings:set', { key: 'autoSwitchModel', value: val })
+  }
+
+  const handleClearExhausted = async () => {
+    await invoke('ai:clearExhaustedProfiles')
+    setExhaustedIds([])
+  }
 
   const handleOpenAdd = () => {
     setEditingProfile({
       id: Date.now().toString(),
       name: `AI Profile ${profiles.length + 1}`,
       provider: 'gemini',
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       apiKey: '',
       active: profiles.length === 0
     })
@@ -131,8 +179,39 @@ export default function AIProvidersTab() {
     alert('Đã lưu cấu hình legacy thành công!')
   }
 
-  return (
+    return (
     <div className="animate-fade-in">
+      {/* Auto-switch toggle bar */}
+      <div className="glass-card" style={{ padding: '14px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>Auto-switch khi hết limit</span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Tự động xoay sang AI khác khi bị rate limit</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {exhaustedIds.length > 0 && (
+            <button className="btn-ghost" style={{ fontSize: 11, color: '#f59e0b', gap: 4 }} onClick={handleClearExhausted}>
+              <RefreshCw size={12} /> Reset trạng thái ({exhaustedIds.length})
+            </button>
+          )}
+          <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24, cursor: 'pointer' }}>
+            <input type="checkbox" checked={autoSwitch} onChange={e => handleToggleAutoSwitch(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
+            <span style={{
+              position: 'absolute', inset: 0, borderRadius: 12,
+              background: autoSwitch ? '#6366f1' : 'var(--surface-3)',
+              transition: 'all 0.3s ease',
+            }}>
+              <span style={{
+                position: 'absolute', width: 18, height: 18, borderRadius: '50%',
+                background: 'white', top: 3,
+                left: autoSwitch ? 23 : 3,
+                transition: 'all 0.3s ease',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+              }} />
+            </span>
+          </label>
+        </div>
+      </div>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h2 style={{ fontSize: 16, fontWeight: 700 }}>Danh sách AI API</h2>
@@ -185,6 +264,11 @@ export default function AIProvidersTab() {
                   </td>
                   <td>
                     <code style={{ fontSize: 11, background: 'var(--surface-3)', padding: '2px 6px', borderRadius: 4 }}>{p.model}</code>
+                    {exhaustedIds.includes(p.id) && (
+                      <span style={{ marginLeft: 8, fontSize: 10, color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
+                        ⚠ Hết limit
+                      </span>
+                    )}
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
@@ -257,19 +341,38 @@ export default function AIProvidersTab() {
                 <input className="input" value={editingProfile.name} onChange={e => setEditingProfile({ ...editingProfile, name: e.target.value })} placeholder="VD: Gemini Work" />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label className="label">Provider</label>
-                  <select className="select" value={editingProfile.provider} onChange={e => setEditingProfile({ 
-                    ...editingProfile, 
-                    provider: e.target.value,
-                    model: AI_PROVIDERS.find(ap => ap.key === e.target.value)?.placeholder || ''
-                  })}>
-                    {AI_PROVIDERS.map(ap => <option key={ap.key} value={ap.key}>{ap.label}</option>)}
-                  </select>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label className="label">Provider</label>
+                    <select className="select" value={editingProfile.provider} onChange={e => setEditingProfile({ 
+                      ...editingProfile, 
+                      provider: e.target.value,
+                      model: AI_PROVIDERS.find(ap => ap.key === e.target.value)?.placeholder || ''
+                    })}>
+                      {AI_PROVIDERS.map(ap => <option key={ap.key} value={ap.key}>{ap.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Chọn Model mặc định</label>
+                    <select className="select" 
+                      value={PREDEFINED_MODELS[editingProfile.provider]?.find(m => m.value === editingProfile.model) ? editingProfile.model : 'custom'} 
+                      onChange={e => {
+                        if (e.target.value !== 'custom') {
+                          setEditingProfile({ ...editingProfile, model: e.target.value })
+                        }
+                      }}
+                    >
+                      {PREDEFINED_MODELS[editingProfile.provider]?.map(m => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
+                      <option value="custom">-- Tùy chỉnh (Nhập bên dưới) --</option>
+                    </select>
+                  </div>
                 </div>
+                
                 <div>
-                  <label className="label">Model (Nhập thủ công)</label>
+                  <label className="label">Tên Model (Hoặc nhập mã Model thủ công nếu chọn Tùy chỉnh)</label>
                   <input className="input" value={editingProfile.model} onChange={e => setEditingProfile({ ...editingProfile, model: e.target.value })} 
                     placeholder={AI_PROVIDERS.find(ap => ap.key === editingProfile.provider)?.placeholder} />
                 </div>

@@ -9,6 +9,9 @@ export function registerSettingsIpc(store: Store) {
       dbConfig: store.get('dbConfig') || null,
       aiConfig: maskAiConfig(store.get('aiConfig') as Record<string, string> | undefined),
       theme: store.get('theme') || 'dark', // Default to dark if not set
+      outputLanguage: store.get('outputLanguage') || 'Vietnamese',
+      defaultPersonaId: store.get('defaultPersonaId') || '',
+      autoSwitchModel: store.get('autoSwitchModel') || false,
       appVersion: app.getVersion(),
       userDataPath: app.getPath('userData'),
     }
