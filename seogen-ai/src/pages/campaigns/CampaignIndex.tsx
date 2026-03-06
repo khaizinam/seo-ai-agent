@@ -7,6 +7,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { Edit2, Trash2, Plus, Loader2 } from 'lucide-react'
 
 import { useTableState } from '../../hooks/useTableState'
+import { useAppStore } from '../../stores/app.store'
 
 interface Campaign {
   id: number;
@@ -28,6 +29,7 @@ export default function CampaignIndex() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
+  const setToast = useAppStore(s => s.setToast)
 
   // Applied filter (persisted)
   const [appliedFilter, setAppliedFilter] = useTableState('campaign_filter', {
@@ -87,7 +89,12 @@ export default function CampaignIndex() {
   const handleDelete = async () => {
     if (!deleteItem) return
     setActionLoading(true)
-    await invoke('campaign:delete', deleteItem.id)
+    try {
+      await invoke('campaign:delete', deleteItem.id)
+      setToast({ message: 'Xoá chiến dịch thành công', type: 'success' })
+    } catch (err: any) {
+      setToast({ message: `Lỗi khi xoá: ${err.message || 'Không xác định'}`, type: 'error' })
+    }
     setDeleteItem(null)
     await load()
     setActionLoading(false)
@@ -170,7 +177,7 @@ export default function CampaignIndex() {
       <ConfirmDialog
         open={!!deleteItem}
         title="Xoá chiến dịch?"
-        message={`Chiến dịch "${deleteItem?.name}" và toàn bộ từ khoá bên trong sẽ bị xoá vĩnh viễn.`}
+        message={`Chiến dịch "${deleteItem?.name}" cùng TOÀN BỘ bài viết và từ khoá bên trong sẽ bị xoá vĩnh viễn.`}
         confirmLabel="Xoá vĩnh viễn"
         variant="danger"
         onConfirm={handleDelete}

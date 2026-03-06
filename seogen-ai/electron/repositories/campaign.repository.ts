@@ -44,6 +44,22 @@ export class CampaignRepository {
   }
 
   async delete(id: number) {
+    // 1. Find all articles belonging to this campaign
+    const articles = await this.db('articles').where({ campaign_id: id }).select('id')
+    const articleIds = articles.map((a: any) => a.id)
+
+    // 2. Delete seo_audits for those articles if any exist
+    if (articleIds.length > 0) {
+      await this.db('seo_audits').whereIn('article_id', articleIds).delete()
+    }
+
+    // 3. Delete all articles for this campaign
+    await this.db('articles').where({ campaign_id: id }).delete()
+
+    // 4. Delete all keywords for this campaign
+    await this.db('keywords').where({ campaign_id: id }).delete()
+
+    // 5. Finally, delete the campaign
     await this.db('campaigns').where({ id }).delete()
     return true
   }

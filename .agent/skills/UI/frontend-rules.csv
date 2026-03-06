@@ -19,6 +19,8 @@ API,Bridge,ONLY Use window.api.invoke() for Main process talk,Context isolation 
 API,Safety,Await IPC results + try/catch wrapped in handlers,Standard async error handling
 API,Channels,Use namespace:action naming for IPC channels,Example: db:connect | ai:save-config
 API,Masking,API keys should be masked in UI before display,Safety: store real keys in raw state
+CRUD ACTION,Toast,All CRUD actions must display a success or failure Toast,Required for User feedback using appStore.toast
+CRUD ACTION,Confirm,All Delete actions must use a Confirm Dialog Modal,Required to prevent accidental data loss
 TYPING,TypeScript,Define Interface for every IPC response,interface DBConfig { host: string }
 TYPING,Check,Run npx tsc before code completion,Type integrity gate
 UTILS,Common,@/lib/utils.ts for tailwind-merge and formatters,Pure utility functions
