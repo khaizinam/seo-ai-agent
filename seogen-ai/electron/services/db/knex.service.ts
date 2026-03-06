@@ -142,6 +142,18 @@ export async function runMigrations(store: Store): Promise<void> {
       t.string('keyword', 500)
       t.text('content_social')
       t.text('thumbnail_prompt')
+      t.integer('current_step').defaultTo(1)
+      t.integer('highest_unlocked_step').defaultTo(1)
+      t.text('campaign_summary')
+      t.string('tone_of_voice', 100)
+      t.string('target_audience', 255)
+      t.string('output_language', 50)
+      t.text('primary_keywords') // stored as JSON string
+      t.text('secondary_keywords') // stored as JSON string
+      t.text('keyword_placement_rules') // stored as JSON string
+      t.text('eeat_summary')
+      t.text('qna_list') // stored as JSON string
+      t.text('outline_data') // stored as JSON string
       t.timestamps(true, true)
     })
   } else {
@@ -166,6 +178,23 @@ export async function runMigrations(store: Store): Promise<void> {
     if (!(await knex.schema.hasColumn('articles', 'thumbnail_prompt'))) {
       await knex.schema.table('articles', t => {
         t.text('thumbnail_prompt')
+      })
+    }
+    // Linear Wizard Fields
+    if (!(await knex.schema.hasColumn('articles', 'current_step'))) {
+      await knex.schema.table('articles', t => {
+        t.integer('current_step').defaultTo(1)
+        t.integer('highest_unlocked_step').defaultTo(1)
+        t.text('campaign_summary')
+        t.string('tone_of_voice', 100)
+        t.string('target_audience', 255)
+        t.string('output_language', 50)
+        t.text('primary_keywords')
+        t.text('secondary_keywords')
+        t.text('keyword_placement_rules')
+        t.text('eeat_summary')
+        t.text('qna_list')
+        t.text('outline_data')
       })
     }
   }

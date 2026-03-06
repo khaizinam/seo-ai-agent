@@ -110,8 +110,8 @@ export function ArticleSidebar({
             </div>
             
             <div>
-              <label className="label">Từ khoá {!plannedId && !isEdit && '*'}</label>
-              {!plannedId && !isEdit ? (
+              <label className="label">Từ khoá {!plannedId && '*'}</label>
+              {!plannedId ? (
                 <select className="select" value={selKeyword} onChange={e => setSelKeyword(e.target.value)}>
                   <option value="">-- Chọn từ khoá --</option>
                   {keywords.map(k => <option key={k.id} value={k.id}>{k.keyword}</option>)}

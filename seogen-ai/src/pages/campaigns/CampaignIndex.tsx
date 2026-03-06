@@ -132,6 +132,8 @@ export default function CampaignIndex() {
       </div>
 
       <TableFilter
+        initialKeyword={appliedFilter.keyword}
+        initialFilters={{ status: appliedFilter.status }}
         filters={[{ key: 'status', placeholder: 'Trạng thái', options: STATUS_OPTS }]}
         sorts={[
           { key: 'created_at', label: 'Ngày tạo' },

@@ -190,12 +190,12 @@ export default function ArticleIndex() {
           <h1 className="page-title">📝 Quản lý bài viết</h1>
           <p className="page-subtitle">Quản lý và kiểm duyệt bài viết SEO</p>
         </div>
-        <button className="btn-primary" onClick={() => navigate('/article/create')}>
-          <Plus size={16} /> Tạo bài viết mới
-        </button>
       </div>
 
       <TableFilter
+        initialKeyword={appliedFilter.keyword}
+        initialFilters={{ status: appliedFilter.status }}
+        initialExtraVals={{ campaign_id: appliedFilter.campaign_id }}
         initialSortBy={appliedFilter.sortKey}
         initialSortDir={appliedFilter.sortDir}
         filters={[{ key: 'status', placeholder: 'Trạng thái', options: STATUS_OPTS }]}

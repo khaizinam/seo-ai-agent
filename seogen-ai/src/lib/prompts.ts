@@ -82,6 +82,92 @@ HTML FORMAT RULES:
 Output language: ${lang}.`
 }
 
+// ─── Article Brief Generation (Step 1) ───
+export function buildBriefUserPrompt(title: string, lang = 'Vietnamese'): string {
+  return `Act as an expert Marketing Strategist. Analyze the following article title or keyword: "${title}"
+Create the Campaign Summary and Target Audience logically suited for this article topic.
+Output language: ${lang}
+
+REQUIREMENTS:
+1. Output ONLY a valid JSON object matching this exact structure:
+{
+  "campaign_summary": "A 2-3 sentence summary of the marketing campaign goal and context",
+  "target_audience": "Describe the ideal target audience (age, interests, pain points) in 1-2 sentences"
+}
+2. NO markdown tags like \`\`\`json, NO comments, ONLY the raw JSON object.`
+}
+
+// ─── Article Outline Generation (Step 2) ───
+export function buildOutlineUserPrompt(
+  title: string,
+  campaignSummary: string,
+  targetAudience: string,
+  toneOfVoice: string,
+  lang = 'Vietnamese'
+): string {
+  return `Create an SEO Outline JSON for the article: "${title}"
+Campaign context: ${campaignSummary}
+Target Audience: ${targetAudience}
+Tone: ${toneOfVoice}
+Output language: ${lang}
+
+REQUIREMENTS:
+1. Output ONLY a valid JSON object matching this exact structure:
+{
+  "outline_data": [
+    {"level": 2, "title": "H2 Introduction"},
+    {"level": 3, "title": "H3 Detail"},
+    {"level": 2, "title": "H2 Next part"}
+  ],
+  "qna_list": [
+    {"q": "Popular question 1?", "a": "Short answer 1"}
+  ],
+  "eeat_summary": "1-2 sentences of practical experience, stats, or real-world examples",
+  "secondary_keywords": ["LSI keyword 1", "keyword 2"]
+}
+2. NO markdown tags like \`\`\`json, NO comments, ONLY the raw JSON object.`
+}
+
+// ─── Article Generation Chunking (Step 3) ───
+
+export function buildIntroUserPrompt(
+  title: string,
+  campaignSummary: string,
+  eeatSummary: string,
+  secondaryKeywords: string,
+  toneOfVoice: string,
+  lang = 'Vietnamese'
+): string {
+  return `Write the introduction for: "${title}"
+Campaign context: ${campaignSummary}
+E-E-A-T details: ${eeatSummary}
+Secondary keywords: ${secondaryKeywords}
+
+REQUIREMENTS:
+1. Write 2-3 short paragraphs with an engaging hook.
+2. Tone: ${toneOfVoice}. Output language: ${lang}.
+3. Format as plain HTML <p> tags only. NO H1, NO H2.
+4. Return ONLY clean HTML code, no markdown wrappers, no explanations.`
+}
+
+export function buildChunkUserPrompt(
+  title: string,
+  headingLevel: string, // e.g. "h2" or "h3"
+  headingTitle: string,
+  headingIndex: number,
+  toneOfVoice: string,
+  lang = 'Vietnamese'
+): string {
+  return `Write content for the ${headingLevel.toUpperCase()} section: "${headingTitle}" of the article "${title}".
+Tone: ${toneOfVoice}. Output language: ${lang}.
+
+REQUIREMENTS:
+1. Format as HTML. MUST START with: <${headingLevel} id="heading-${headingIndex}">${headingTitle}</${headingLevel}>.
+2. Follow with detailed paragraphs (<p>), lists (<ul>), etc.
+3. Keep paragraphs short and concise.
+4. Return ONLY clean HTML code. Do NOT wrap in <html> or <body>.`
+}
+
 // ─── Social Content Generation ───
 
 export function buildSocialSystemPrompt(personaName?: string, lang = 'Vietnamese'): string {
@@ -95,16 +181,16 @@ export function buildSocialUserPrompt(
   title: string,
   articleText: string,
   personaName: string,
-  platform: 'Facebook' | 'LinkedIn',
+  platform: string,
   lang = 'Vietnamese'
 ): string {
   return `Based on the SEO article: "${title}"
 Article summary: ${articleText}
 Requirements:
-1. Use dynamic icons/emojis and relevant hashtags.
-2. Write in the voice of: ${personaName}.
-3. Return ONLY the post content, no explanations.
-Platform: ${platform}.
+1. Write 1 highly converting promotional post specifically for ${platform}. Do NOT write for any other platforms like LinkedIn or Twitter.
+2. Use dynamic icons/emojis and relevant hashtags.
+3. Write in the voice of: ${personaName}. Focus on capturing attention and driving clicks.
+4. Return ONLY the ${platform} post content, no explanations.
 Output language: ${lang}.`
 }
 

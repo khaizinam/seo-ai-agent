@@ -8,7 +8,7 @@ import CampaignIndex from './pages/campaigns/CampaignIndex'
 import CampaignForm from './pages/campaigns/CampaignForm'
 import PersonaPage from './pages/Persona'
 import ArticleIndex from './pages/articles/ArticleIndex'
-import ArticleForm from './pages/articles/ArticleForm'
+import ArticleWizard from './pages/articles/ArticleWizard'
 import ThumbnailPage from './pages/Thumbnail'
 import AuditPage from './pages/Audit'
 import SettingsPage from './pages/Settings'
@@ -214,8 +214,8 @@ export default function App() {
                 <Route path="/campaign/edit/:id" element={<CampaignForm />} />
                 <Route path="/persona" element={<PersonaPage />} />
                 <Route path="/article" element={<ArticleIndex />} />
-                <Route path="/article/create" element={<ArticleForm />} />
-                <Route path="/article/edit/:id" element={<ArticleForm />} />
+                <Route path="/article/create" element={<ArticleWizard />} />
+                <Route path="/article/edit/:id" element={<ArticleWizard />} />
                 <Route path="/thumbnail" element={<ThumbnailPage />} />
                 <Route path="/audit" element={<AuditPage />} />
                 <Route path="/webhook" element={<WebhookIndex />} />

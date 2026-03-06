@@ -33,6 +33,9 @@ type TableFilterProps = {
   initialSortBy?: string
   initialSortDir?: 'asc' | 'desc'
   loading?: boolean
+  initialKeyword?: string
+  initialFilters?: Record<string, string>
+  initialExtraVals?: Record<string, string>
 }
 
 export function TableFilter({
@@ -45,14 +48,19 @@ export function TableFilter({
   initialSortBy = '',
   initialSortDir = 'desc',
   loading = false,
+  initialKeyword = '',
+  initialFilters = {},
+  initialExtraVals = {},
 }: TableFilterProps) {
-  const [keyword, setKeyword] = useState('')
-  const [filterValues, setFilterValues] = useState<Record<string, string>>(
-    Object.fromEntries(filters.map(f => [f.key, '']))
-  )
-  const [extraVals, setExtraVals] = useState<Record<string, string>>(
-    Object.fromEntries(extraInputs.map(e => [e.key, '']))
-  )
+  const [keyword, setKeyword] = useState(initialKeyword)
+  const [filterValues, setFilterValues] = useState<Record<string, string>>(() => {
+    const base = Object.fromEntries(filters.map(f => [f.key, '']))
+    return { ...base, ...initialFilters }
+  })
+  const [extraVals, setExtraVals] = useState<Record<string, string>>(() => {
+    const base = Object.fromEntries(extraInputs.map(e => [e.key, '']))
+    return { ...base, ...initialExtraVals }
+  })
   const [sortBy, setSortBy] = useState(initialSortBy)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>(initialSortDir)
   const inputRef = useRef<HTMLInputElement>(null)
