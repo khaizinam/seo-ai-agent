@@ -6,7 +6,8 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { AIProcessingOverlay } from '../../components/ui/AIProcessingOverlay'
 import { ArticleSidebar } from './components/ArticleSidebar'
 import { PublishModal } from './components/PublishModal'
-import { Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { Loader2, CheckCircle2 } from 'lucide-react'
+import { PageHeader } from '../../components/ui'
 
 // Steps Components - sẽ được define sau
 import Step1Brief from './wizard/Step1Brief'
@@ -195,20 +196,11 @@ export default function ArticleWizard() {
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--surface-0)' }}>
-      {/* HEADER */}
-      <div style={{ padding: '20px 32px', display: 'flex', alignItems: 'center', gap: 16, borderBottom: '1px solid var(--border)' }}>
-         <button className="btn-ghost" onClick={handleExit} style={{ padding: '8px', borderRadius: 8, background: 'var(--surface-1)' }}>
-          <ArrowLeft size={16} />
-         </button>
-         <div style={{ flex: 1 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-              {articleData.title || (isEdit ? 'Chỉnh sửa bài viết' : 'Tạo bài viết SEO mới')}
-            </h1>
-            <p style={{ margin: '4px 0 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
-              Trình hướng dẫn - Bước {articleData.current_step} / 4
-            </p>
-         </div>
-      </div>
+      <PageHeader
+        title={articleData.title || (isEdit ? 'Chỉnh sửa bài viết' : 'Tạo bài viết SEO mới')}
+        subtitle={`Trình hướng dẫn - Bước ${articleData.current_step} / 4`}
+        onBack={handleExit}
+      />
 
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 340px', overflow: 'hidden' }}>
         
@@ -323,7 +315,7 @@ export default function ArticleWizard() {
              status={articleData.status} setStatus={(v) => autoSave({status: v})}
              weekNumber={articleData.week_number} setWeekNumber={(v) => autoSave({week_number: v})}
              articleType={articleData.article_type} setArticleType={(v) => autoSave({article_type: v})}
-             plannedKeywordName={articleData.keyword_from_db || ''}
+             plannedKeywordName={articleData.keyword || articleData.keyword_from_db || ''}
              isEdit={isEdit} plannedId={plannedId}
              saving={saving} generating={generating}
              onSave={() => autoSave({})}

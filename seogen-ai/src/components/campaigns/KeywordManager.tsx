@@ -1,5 +1,5 @@
 import React from 'react'
-import { Loader2, Sparkles } from 'lucide-react'
+import { ButtonGenAI, Section } from '../ui'
 
 interface Props {
   navKws: string[]
@@ -48,9 +48,7 @@ export default function KeywordManager({
     const newTags = text.split(/\n|,/)
       .map(t => t.trim())
       .filter(t => t.length > 0)
-
     if (newTags.length === 0) return
-
     setKwDirty(true)
     if (intent === 'navigational') {
       setNavKws(prev => Array.from(new Set([...prev, ...newTags])))
@@ -69,38 +67,33 @@ export default function KeywordManager({
   }
 
   return (
-    <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, margin: 0 }}>DANH SÁCH TỪ KHOÁ ({navKws.length + infoKws.length})</h3>
-        <button 
-          className="btn-secondary" 
-          style={{ height: 32, fontSize: 12, borderRadius: 6, background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', color: 'white', border: 'none' }}
-          onClick={handleAiSuggest}
-          disabled={aiLoading}
-        >
-          {aiLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+    <Section
+      title={`DANH SÁCH TỪ KHOÁ (${navKws.length + infoKws.length})`}
+      action={
+        <ButtonGenAI size="sm" loading={aiLoading} onClick={handleAiSuggest}>
           AI Trợ giúp
-        </button>
-      </div>
-      
+        </ButtonGenAI>
+      }
+      noPadding
+    >
       <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* Navigational Box */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6' }}></span>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6' }} />
             Navigational Keywords
           </label>
           <div className="tag-input-box" onClick={() => document.getElementById('nav-kw-in')?.focus()}>
             {navKws.map(kw => (
               <span key={kw} className="kw-tag" style={{ borderLeft: '2px solid #8b5cf6' }}>
-                {kw} <button onClick={(e) => { e.stopPropagation(); removeTag('navigational', kw) }}>✕</button>
+                {kw} <button onClick={e => { e.stopPropagation(); removeTag('navigational', kw) }}>✕</button>
               </span>
             ))}
-            <input 
+            <input
               id="nav-kw-in"
-              type="text" 
+              type="text"
               className="kw-tag-input"
-              placeholder={navKws.length === 0 ? "Nhập từ khoá và bấm Enter..." : "Thêm từ khoá..."}
+              placeholder={navKws.length === 0 ? 'Nhập từ khoá và bấm Enter...' : 'Thêm từ khoá...'}
               value={navInput}
               onChange={e => setNavInput(e.target.value)}
               onKeyDown={e => handleTagInputKeyDown(e, 'navigational', navInput, setNavInput)}
@@ -112,20 +105,20 @@ export default function KeywordManager({
         {/* Informational Box */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#06b6d4' }}></span>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#06b6d4' }} />
             Informational Keywords
           </label>
           <div className="tag-input-box" onClick={() => document.getElementById('info-kw-in')?.focus()}>
             {infoKws.map(kw => (
               <span key={kw} className="kw-tag" style={{ borderLeft: '2px solid #06b6d4' }}>
-                {kw} <button onClick={(e) => { e.stopPropagation(); removeTag('informational', kw) }}>✕</button>
+                {kw} <button onClick={e => { e.stopPropagation(); removeTag('informational', kw) }}>✕</button>
               </span>
             ))}
-            <input 
+            <input
               id="info-kw-in"
-              type="text" 
+              type="text"
               className="kw-tag-input"
-              placeholder={infoKws.length === 0 ? "Nhập từ khoá và bấm Enter..." : "Thêm từ khoá..."}
+              placeholder={infoKws.length === 0 ? 'Nhập từ khoá và bấm Enter...' : 'Thêm từ khoá...'}
               value={infoInput}
               onChange={e => setInfoInput(e.target.value)}
               onKeyDown={e => handleTagInputKeyDown(e, 'informational', infoInput, setInfoInput)}
@@ -133,13 +126,13 @@ export default function KeywordManager({
             />
           </div>
         </div>
-        
+
         {kwDirty && (
           <div style={{ fontSize: 12, color: 'var(--warning)', marginTop: -8 }}>
             * Có thay đổi chưa được lưu. Hãy bấm "Lưu thay đổi" để hệ thống cập nhật bộ từ khoá.
           </div>
         )}
       </div>
-    </div>
+    </Section>
   )
 }

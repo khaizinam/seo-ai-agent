@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react'
 import { invoke } from '../../lib/api'
 import { useAppStore } from '../../stores/app.store'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { AIProcessingOverlay } from '../../components/ui/AIProcessingOverlay'
 import { useNavigate } from 'react-router-dom'
 import { Pagination } from '../ui/Pagination'
+import { Section, ButtonGenAI } from '../ui'
+
+const STATUS_BADGE: Record<string, string> = {
+  draft: 'badge-muted',
+  reviewed: 'badge-warning',
+  published: 'badge-success'
+}
 
 export interface PlannedArticle {
   id: number
@@ -28,14 +35,11 @@ export default function CampaignPlanTab({ campaignId }: Props) {
 
   const [loading, setLoading] = useState(true)
   const [plan, setPlan] = useState<PlannedArticle[]>([])
-  
   const [campData, setCampData] = useState<any>(null)
-  
   const [planLoading, setPlanLoading] = useState(false)
   const [aiOverlayVisible, setAiOverlayVisible] = useState(false)
   const [aiOverlayStep, setAiOverlayStep] = useState('')
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(20)
 
@@ -46,7 +50,6 @@ export default function CampaignPlanTab({ campaignId }: Props) {
         invoke<PlannedArticle[]>('article:list', { campaign_id: +campaignId }),
         invoke<any>('campaign:get', +campaignId)
       ])
-      
       setPlan(articles || [])
       setCampData(camp || null)
     } catch (e: any) {
@@ -57,9 +60,7 @@ export default function CampaignPlanTab({ campaignId }: Props) {
   }
 
   useEffect(() => {
-    if (campaignId) {
-      fetchData()
-    }
+    if (campaignId) fetchData()
   }, [campaignId])
 
   const handleGenerateContentPlan = async () => {
@@ -90,8 +91,6 @@ export default function CampaignPlanTab({ campaignId }: Props) {
     }
   }
 
-
-
   if (loading) {
     return (
       <div style={{ padding: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -100,34 +99,21 @@ export default function CampaignPlanTab({ campaignId }: Props) {
     )
   }
 
-  const durationType = campData?.duration_type || 'weeks'
-
-  // Calculate Pagination
   const totalItems = plan.length
-  const totalPages = Math.ceil(totalItems / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
   const paginatedPlan = plan.slice(startIndex, startIndex + itemsPerPage)
 
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage)
-  }
-
   return (
     <>
-      <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, margin: 0 }}>KẾ HOẠCH NỘI DUNG ({plan.length})</h3>
-          <button 
-            className="btn-secondary" 
-            style={{ height: 32, fontSize: 12, borderRadius: 6, background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)', color: 'white', border: 'none' }}
-            onClick={handleGenerateContentPlan}
-            disabled={planLoading}
-          >
-            {planLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+      <Section
+        title={`KẾ HOẠCH NỘI DUNG (${plan.length})`}
+        action={
+          <ButtonGenAI size="sm" loading={planLoading} onClick={handleGenerateContentPlan}>
             Lập kế hoạch AI
-          </button>
-        </div>
-        
+          </ButtonGenAI>
+        }
+        noPadding
+      >
         <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
           <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
             <table className="data-table">
@@ -138,6 +124,7 @@ export default function CampaignPlanTab({ campaignId }: Props) {
                   <th style={{ width: 200, background: 'rgba(255,255,255,0.02)' }}>Từ khoá</th>
                   <th style={{ width: 80, background: 'rgba(255,255,255,0.02)', textAlign: 'center' }}>Tuần</th>
                   <th style={{ width: 100, background: 'rgba(255,255,255,0.02)' }}>Loại</th>
+                  <th style={{ width: 120, background: 'rgba(255,255,255,0.02)' }}>Trạng thái</th>
                   <th style={{ width: 140, background: 'rgba(255,255,255,0.02)', textAlign: 'right' }}>Thao tác</th>
                 </tr>
               </thead>
@@ -165,20 +152,25 @@ export default function CampaignPlanTab({ campaignId }: Props) {
                         {art.article_type === 'pillar' ? 'Pillar' : 'Satellite'}
                       </span>
                     </td>
+                    <td>
+                      <span className={`badge ${STATUS_BADGE[art.status] || 'badge-muted'}`} style={{ textTransform: 'capitalize' }}>
+                        {art.status || 'draft'}
+                      </span>
+                    </td>
                     <td style={{ textAlign: 'right' }}>
-                      <button 
+                      <button
                         className={`badge ${art.content_html ? 'badge-success' : 'badge-purple'}`}
                         style={{ cursor: 'pointer', border: 'none' }}
                         onClick={() => navigate(`/article/edit/${art.id}`)}
                       >
-                        {art.content_html ? 'Xem bài' : 'Xem bài'}
+                        Xem bài
                       </button>
                     </td>
                   </tr>
                 ))}
                 {plan.length === 0 && (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
                       <div>Bấm "Lập kế hoạch AI" để tạo danh sách bài viết theo thời gian</div>
                     </td>
                   </tr>
@@ -190,23 +182,18 @@ export default function CampaignPlanTab({ campaignId }: Props) {
           {totalItems > 0 && (
             <Pagination
               state={{ page: currentPage, pageSize: itemsPerPage, total: totalItems }}
-              onPageChange={handlePageChange}
-              onPageSizeChange={(size) => {
-                setItemsPerPage(size)
-                setCurrentPage(1)
-              }}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={size => { setItemsPerPage(size); setCurrentPage(1) }}
               pageSizeOptions={[10, 20, 50, 100]}
             />
           )}
         </div>
-      </div>
-
-
+      </Section>
 
       <AIProcessingOverlay
         visible={aiOverlayVisible}
         stepLabel={aiOverlayStep}
-        onCancel={() => { setAiOverlayVisible(false); setPlanLoading(false); }}
+        onCancel={() => { setAiOverlayVisible(false); setPlanLoading(false) }}
       />
     </>
   )

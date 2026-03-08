@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { invoke } from '../../lib/api'
 import { useAppStore } from '../../stores/app.store'
-import { Save, Loader2, Sparkles, Check } from 'lucide-react'
+import { Save, Check, Sparkles } from 'lucide-react'
 import { AIProcessingOverlay } from '../../components/ui/AIProcessingOverlay'
+import { Button, ButtonGenAI, Section, FormField, SelectField, InputText } from '../ui'
 import KeywordManager from './KeywordManager'
 import CampaignDetails from './CampaignDetails'
 
@@ -23,9 +24,9 @@ export interface CampaignFormData {
   articles_per_week: number
 }
 
-const DEFAULT_FORM: CampaignFormData = { 
-  name: '', 
-  description: '', 
+const DEFAULT_FORM: CampaignFormData = {
+  name: '',
+  description: '',
   status: 'active',
   duration_type: 'weeks',
   duration_value: 4,
@@ -36,6 +37,11 @@ const INTENT_BADGE: Record<string, string> = {
   informational: 'badge-info', commercial: 'badge-warning',
   transactional: 'badge-success', navigational: 'badge-purple',
 }
+
+const DURATION_TYPE_OPTS = [
+  { label: 'Tuần', value: 'weeks' },
+  { label: 'Tháng', value: 'months' },
+]
 
 interface Props {
   campaignId?: string
@@ -51,16 +57,14 @@ export default function CampaignDetailsTab({ campaignId }: Props) {
   const [errors, setErrors] = useState<Partial<CampaignFormData>>({})
   const { setToast } = useAppStore()
 
-  // Keyword states
   const [navKws, setNavKws] = useState<string[]>([])
   const [infoKws, setInfoKws] = useState<string[]>([])
   const [navInput, setNavInput] = useState('')
   const [infoInput, setInfoInput] = useState('')
   const [kwDirty, setKwDirty] = useState(false)
 
-  // AI states
   const [aiLoading, setAiLoading] = useState(false)
-  const [suggestedKws, setSuggestedKws] = useState<{keyword: string, intent: string}[]>([])
+  const [suggestedKws, setSuggestedKws] = useState<{ keyword: string, intent: string }[]>([])
   const [showAiModal, setShowAiModal] = useState(false)
   const [aiSuggestingTime, setAiSuggestingTime] = useState(false)
   const [aiOverlayVisible, setAiOverlayVisible] = useState(false)
@@ -73,9 +77,9 @@ export default function CampaignDetailsTab({ campaignId }: Props) {
       invoke<any>('campaign:get', +campaignId!),
       invoke<Keyword[]>('keyword:list', +campaignId!)
     ]).then(([camp, kws]) => {
-      if (camp) setForm({ 
-        name: camp.name, 
-        description: camp.description || '', 
+      if (camp) setForm({
+        name: camp.name,
+        description: camp.description || '',
         status: camp.status,
         duration_type: camp.duration_type || 'weeks',
         duration_value: camp.duration_value || 4,
@@ -144,9 +148,7 @@ export default function CampaignDetailsTab({ campaignId }: Props) {
     }
   }
 
-  const handleCancel = () => {
-    navigate('/campaign')
-  }
+  const handleCancel = () => navigate('/campaign')
 
   const handleAiSuggest = async () => {
     if (!form.name.trim()) return alert('Vui lòng nhập tên chiến dịch trước')
@@ -205,11 +207,9 @@ export default function CampaignDetailsTab({ campaignId }: Props) {
     try {
       const suggestedNav = suggestedKws.filter(k => k.intent === 'navigational').map(k => k.keyword)
       const suggestedInfo = suggestedKws.filter(k => k.intent === 'informational').map(k => k.keyword)
-      
       setNavKws(suggestedNav)
       setInfoKws(suggestedInfo)
       setKwDirty(true)
-      
       setShowAiModal(false)
       setToast({ message: 'Đã đồng bộ bộ từ khoá mới từ AI', type: 'success' })
     } catch (e: any) {
@@ -222,7 +222,7 @@ export default function CampaignDetailsTab({ campaignId }: Props) {
   if (fetchLoading) {
     return (
       <div style={{ padding: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 size={28} className="animate-spin" color="var(--brand-primary)" />
+        <div className="animate-spin" style={{ width: 28, height: 28, border: '3px solid var(--brand-primary)', borderTopColor: 'transparent', borderRadius: '50%' }} />
       </div>
     )
   }
@@ -235,16 +235,11 @@ export default function CampaignDetailsTab({ campaignId }: Props) {
 
         {isEdit && (
           <KeywordManager
-            navKws={navKws}
-            infoKws={infoKws}
-            setNavKws={setNavKws}
-            setInfoKws={setInfoKws}
-            navInput={navInput}
-            setNavInput={setNavInput}
-            infoInput={infoInput}
-            setInfoInput={setInfoInput}
-            kwDirty={kwDirty}
-            setKwDirty={setKwDirty}
+            navKws={navKws} infoKws={infoKws}
+            setNavKws={setNavKws} setInfoKws={setInfoKws}
+            navInput={navInput} setNavInput={setNavInput}
+            infoInput={infoInput} setInfoInput={setInfoInput}
+            kwDirty={kwDirty} setKwDirty={setKwDirty}
             handleAiSuggest={handleAiSuggest}
             aiLoading={aiLoading}
           />
@@ -253,110 +248,70 @@ export default function CampaignDetailsTab({ campaignId }: Props) {
 
       {/* RIGHT SIDE */}
       <div style={{ position: 'sticky', top: 28, display: 'flex', flexDirection: 'column', gap: 24 }}>
-        <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>HÀNH ĐỘNG</h3>
-          </div>
-          
-          <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <button 
-              className="btn-primary" 
-              style={{ height: 44, width: '100%', fontSize: 13, background: 'var(--brand-primary)', color: 'white' }} 
-              onClick={handleSave} 
-              disabled={loading}
-            >
-              {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+        <Section title="HÀNH ĐỘNG">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <Button variant="primary" fullWidth loading={loading} icon={<Save size={16} />} onClick={handleSave}>
               Lưu thay đổi
-            </button>
-            
-            <button 
-              className="btn-primary" 
-              style={{ height: 44, width: '100%', fontSize: 13, background: '#10b981', color: 'white' }} 
-              onClick={handleSaveAndExit} 
-              disabled={loading}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              Lưu & Thoát
-            </button>
-
-            <button 
-              className="btn-secondary" 
-              style={{ height: 44, width: '100%', fontSize: 13, background: 'var(--surface-1)' }} 
-              onClick={handleCancel} 
-              disabled={loading}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              Hủy
-            </button>
+            </Button>
+            <Button variant="primary" fullWidth loading={loading} icon={<Check size={16} />} onClick={handleSaveAndExit}
+              style={{ background: '#10b981' }}>
+              Lưu &amp; Thoát
+            </Button>
+            <Button variant="secondary" fullWidth disabled={loading} onClick={handleCancel}>
+              Huỷ
+            </Button>
           </div>
-        </div>
+        </Section>
 
         {isEdit && (
           <>
-            <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, margin: 0 }}>CÀI ĐẶT THỜI GIAN</h3>
-                <button 
-                  className="btn-secondary" 
-                  style={{ height: 28, fontSize: 12, borderRadius: 6, background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)', color: 'white', border: 'none', padding: '0 10px' }}
-                  onClick={handleAiSuggestTime}
-                  disabled={aiSuggestingTime}
-                  title="AI tự động tính toán tổng số tuần và số bài/tuần phù hợp"
-                >
-                  {aiSuggestingTime ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                  <span style={{ marginLeft: 4 }}>AI Đề xuất</span>
-                </button>
-              </div>
-              <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <label className="label">Đơn vị thời gian</label>
-                  <select 
-                    className="select" 
+            <Section
+              title="CÀI ĐẶT THỜI GIAN"
+              action={
+                <ButtonGenAI size="sm" loading={aiSuggestingTime} onClick={handleAiSuggestTime}
+                  title="AI tự động tính toán tổng số tuần và số bài/tuần phù hợp">
+                  AI Đề xuất
+                </ButtonGenAI>
+              }
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <FormField label="Đơn vị thời gian">
+                  <SelectField
+                    options={DURATION_TYPE_OPTS}
                     value={form.duration_type}
                     onChange={e => setForm(p => ({ ...p, duration_type: e.target.value as any }))}
-                  >
-                    <option value="weeks">Tuần</option>
-                    <option value="months">Tháng</option>
-                  </select>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <label className="label">Tổng thời gian ({form.duration_type === 'weeks' ? 'Tuần' : 'Tháng'})</label>
-                  <input 
-                    className="input" 
-                    type="number" 
-                    min={1} 
+                  />
+                </FormField>
+                <FormField label={`Tổng thời gian (${form.duration_type === 'weeks' ? 'Tuần' : 'Tháng'})`}>
+                  <InputText
+                    type="number"
+                    min={1}
                     value={form.duration_value}
                     onChange={e => setForm(p => ({ ...p, duration_value: +e.target.value }))}
                   />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <label className="label">Mật độ bài viết / tuần</label>
-                  <input 
-                    className="input" 
-                    type="number" 
-                    min={1} 
+                </FormField>
+                <FormField label="Mật độ bài viết / tuần">
+                  <InputText
+                    type="number"
+                    min={1}
                     value={form.articles_per_week}
                     onChange={e => setForm(p => ({ ...p, articles_per_week: +e.target.value }))}
                   />
-                </div>
+                </FormField>
               </div>
-            </div>
+            </Section>
 
-            <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
-                <h3 style={{ fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>THÔNG TIN HỆ THỐNG</h3>
+            <Section title="THÔNG TIN HỆ THỐNG">
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: 'var(--text-muted)' }}>Mã chiến dịch:</span>
+                <span style={{ fontWeight: 600 }}>#{campaignId}</span>
               </div>
-              <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Mã chiến dịch:</span>
-                  <span style={{ fontWeight: 600 }}>#{campaignId}</span>
-                </div>
-              </div>
-            </div>
+            </Section>
           </>
         )}
       </div>
 
+      {/* AI Suggest Modal */}
       {showAiModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
           <div className="glass-card" style={{ width: '100%', maxWidth: 600, maxHeight: '80vh', display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}>
@@ -367,13 +322,11 @@ export default function CampaignDetailsTab({ campaignId }: Props) {
               </div>
               <button className="btn-ghost" onClick={() => setShowAiModal(false)}>&times;</button>
             </div>
-            
             <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
               <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 20 }}>
-                Đây là danh sách từ khoá AI đề xuất dựa trên tên và mô tả chiến dịch của bạn. 
+                Đây là danh sách từ khoá AI đề xuất dựa trên tên và mô tả chiến dịch của bạn.{' '}
                 <span style={{ color: 'var(--danger)', fontWeight: 600 }}> Lưu ý: Toàn bộ từ khoá cũ sẽ bị thay thế.</span>
               </p>
-              
               <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
                 <table className="data-table">
                   <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
@@ -393,18 +346,12 @@ export default function CampaignDetailsTab({ campaignId }: Props) {
                 </table>
               </div>
             </div>
-
             <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-              <button className="btn-secondary" onClick={() => setShowAiModal(false)} disabled={aiLoading}>Hủy</button>
-              <button 
-                className="btn-primary" 
-                style={{ background: '#a855f7', color: 'white' }} 
-                onClick={handleSyncKeywords} 
-                disabled={aiLoading}
-              >
-                {aiLoading ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+              <Button variant="secondary" onClick={() => setShowAiModal(false)} disabled={aiLoading}>Huỷ</Button>
+              <Button variant="primary" loading={aiLoading} icon={<Check size={16} />}
+                style={{ background: '#a855f7' }} onClick={handleSyncKeywords}>
                 Cập nhật toàn bộ ({suggestedKws.length})
-              </button>
+              </Button>
             </div>
           </div>
         </div>

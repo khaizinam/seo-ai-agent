@@ -1,5 +1,6 @@
 import React from 'react'
 import { CampaignFormData } from './CampaignDetailsTab'
+import { FormField, InputText, InputArea, Section } from '../ui'
 
 const STATUS_OPTS = [
   { label: 'Active', value: 'active' },
@@ -15,42 +16,27 @@ interface Props {
 
 export default function CampaignDetails({ form, setForm, errors }: Props) {
   return (
-    <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>THÔNG TIN CHIẾN DỊCH</h3>
-      </div>
-      
+    <Section title="THÔNG TIN CHIẾN DỊCH" noPadding>
       <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {/* Name */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-            Tên chiến dịch *
-          </label>
-          <input
-            className="input"
-            style={{ height: 42, background: 'var(--surface-0)', ...(errors.name ? { borderColor: 'var(--danger)' } : {}) }}
+        <FormField label="Tên chiến dịch" required error={errors.name as string}>
+          <InputText
             placeholder="Nhập tên chiến dịch..."
             value={form.name}
-            onChange={e => { setForm(p => ({ ...p, name: e.target.value })); }}
+            onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+            style={errors.name ? { borderColor: 'var(--danger)' } : undefined}
           />
-          {errors.name && <div style={{ fontSize: 11, color: 'var(--danger)' }}>{errors.name}</div>}
-        </div>
+        </FormField>
 
-        {/* Description */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Mô tả</label>
-          <textarea
-            className="textarea"
-            style={{ minHeight: 120, background: 'var(--surface-0)' }}
+        <FormField label="Mô tả">
+          <InputArea
+            rows={5}
             placeholder="Mô tả mục tiêu, ghi chú về chiến dịch này..."
             value={form.description}
             onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
           />
-        </div>
+        </FormField>
 
-        {/* Status */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Trạng thái</label>
+        <FormField label="Trạng thái">
           <div style={{ display: 'flex', gap: 10 }}>
             {STATUS_OPTS.map(opt => (
               <label
@@ -80,8 +66,8 @@ export default function CampaignDetails({ form, setForm, errors }: Props) {
               </label>
             ))}
           </div>
-        </div>
+        </FormField>
       </div>
-    </div>
+    </Section>
   )
 }

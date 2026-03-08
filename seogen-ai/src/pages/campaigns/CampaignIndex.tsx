@@ -102,6 +102,10 @@ export default function CampaignIndex() {
 
   const columns: ColumnDef<Campaign>[] = [
     {
+      key: 'id', title: 'ID', sortable: true, width: 70,
+      render: c => <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-muted)' }}>#{c.id}</span>,
+    },
+    {
       key: 'name', title: 'Tên chiến dịch', sortable: true,
       render: c => (
         <div>

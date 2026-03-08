@@ -3,6 +3,7 @@ import { invoke } from '../../../lib/api'
 import { useAppStore } from '../../../stores/app.store'
 import { ArticleContentEditor } from '../components/ArticleContentEditor'
 import { buildIntroUserPrompt, buildChunkUserPrompt } from '../../../lib/prompts'
+import { ButtonGenAI, Button } from '../../../components/ui'
 
 // Helper function sleep
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -155,13 +156,11 @@ export default function Step3Content(props: any) {
       </div>
 
       <div className="mt-4 flex justify-end">
-         <button 
-           className="btn-primary px-6 py-2 rounded font-semibold"
-           style={{ background: 'var(--brand-primary)', color: 'white' }}
-           onClick={() => onNext({ content_html: contentHtml })}
-         >
-           Xác nhận Nội dung & Tiếp tục Bước 4
-         </button>
+        <Button variant="primary"
+          style={{ padding: '8px 24px' }}
+          onClick={() => onNext({ content_html: contentHtml })}>
+          Xác nhận Nội dung &amp; Tiếp tục Bước 4
+        </Button>
       </div>
     </div>
   )

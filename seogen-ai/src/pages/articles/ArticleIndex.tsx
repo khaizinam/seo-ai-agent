@@ -4,9 +4,10 @@ import { invoke } from '../../lib/api'
 import { DataTable, ColumnDef, PaginationState, SortState } from '../../components/ui/DataTable'
 import { TableFilter } from '../../components/ui/TableFilter'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
-import { Edit2, Trash2, Plus, Send } from 'lucide-react'
+import { Edit2, Trash2, Send } from 'lucide-react'
 import { useTableState } from '../../hooks/useTableState'
 import { PublishModal } from './components/PublishModal'
+import { PageHeader, Button } from '../../components/ui'
 
 interface Article { 
   id: number; 
@@ -151,33 +152,21 @@ export default function ArticleIndex() {
       key: 'actions', title: 'Thao tác', align: 'right', width: 140,
       render: a => (
         <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-
-          <button 
-            className="btn-ghost" 
-            style={{ padding: 6, color: 'var(--brand-primary)', borderRadius: 6, width: 28, height: 28 }}
+          <Button variant="ghost" size="sm" icon={<Send size={14} />}
+            style={{ color: 'var(--brand-primary)', width: 28, height: 28, padding: 6 }}
             onClick={() => setShowPublishModal(a.id)}
             title="Cập nhật lên trang"
-          >
-            <Send size={14} />
-          </button>
-
-          <button 
-            className="btn-ghost" 
-            style={{ padding: 6, color: 'var(--success)', borderRadius: 6, width: 28, height: 28 }}
+          />
+          <Button variant="ghost" size="sm" icon={<Edit2 size={14} />}
+            style={{ color: 'var(--success)', width: 28, height: 28, padding: 6 }}
             onClick={() => navigate(`/article/edit/${a.id}`)}
             title="Chỉnh sửa nội dung"
-          >
-            <Edit2 size={14} />
-          </button>
-
-          <button 
-            className="btn-ghost" 
-            style={{ padding: 6, color: 'var(--danger)', borderRadius: 6, width: 28, height: 28 }}
+          />
+          <Button variant="ghost" size="sm" icon={<Trash2 size={14} />}
+            style={{ color: 'var(--danger)', width: 28, height: 28, padding: 6 }}
             onClick={() => setDeleteItem(a)}
             title="Xóa bài viết"
-          >
-            <Trash2 size={14} />
-          </button>
+          />
         </div>
       )
     }
@@ -185,12 +174,15 @@ export default function ArticleIndex() {
 
   return (
     <div style={{ padding: '24px 32px' }}>
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div>
-          <h1 className="page-title">📝 Quản lý bài viết</h1>
-          <p className="page-subtitle">Quản lý và kiểm duyệt bài viết SEO</p>
-        </div>
-      </div>
+      <PageHeader
+        title="📝 Quản lý bài viết"
+        subtitle="Quản lý và kiểm duyệt bài viết SEO"
+        actions={
+          <Button variant="primary" icon={<Edit2 size={14} />} onClick={() => navigate('/article/create')}>
+            Tạo bài viết mới
+          </Button>
+        }
+      />
 
       <TableFilter
         initialKeyword={appliedFilter.keyword}

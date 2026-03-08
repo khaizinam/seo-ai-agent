@@ -5,6 +5,7 @@ import { ArticleSocialContent } from '../components/ArticleSocialContent'
 import { ArticleSeoMeta } from '../components/ArticleSeoMeta'
 import { ArticleThumbnailPrompt } from '../components/ArticleThumbnailPrompt'
 import { buildSocialSystemPrompt, buildSocialUserPrompt, stripHtmlToText, buildThumbnailSystemPrompt, buildThumbnailUserPrompt } from '../../../lib/prompts'
+import { ButtonGenAI, Button } from '../../../components/ui'
 
 export default function Step4Social(props: any) {
   const { data, onAutoSave, onFinish, setGenerating, setAiOverlayVisible, setAiOverlayStep, abortRef } = props
@@ -57,11 +58,9 @@ export default function Step4Social(props: any) {
       if (abortRef && abortRef.current) return
       setToast({ message: `Lỗi gen Social: ${e.message}`, type: 'error' })
     } finally {
-      if (!abortRef || !abortRef.current) {
-        setGenerating(false)
-        setLocalGenerating(false)
-        setAiOverlayVisible(false)
-      }
+      setGenerating(false)
+      setLocalGenerating(false)
+      setAiOverlayVisible(false)
     }
   }
 
@@ -96,11 +95,9 @@ export default function Step4Social(props: any) {
       if (abortRef && abortRef.current) return
       setToast({ message: `Lỗi gen Meta: ${e.message}`, type: 'error' })
     } finally {
-      if (!abortRef || !abortRef.current) {
-        setGenerating(false)
-        setLocalGenerating(false)
-        setAiOverlayVisible(false)
-      }
+      setGenerating(false)
+      setLocalGenerating(false)
+      setAiOverlayVisible(false)
     }
   }
 
@@ -135,11 +132,9 @@ export default function Step4Social(props: any) {
       if (abortRef && abortRef.current) return
       setToast({ message: `Lỗi gen Thumbnail: ${e.message}`, type: 'error' })
     } finally {
-      if (!abortRef || !abortRef.current) {
-        setGenerating(false)
-        setLocalGenerating(false)
-        setAiOverlayVisible(false)
-      }
+      setGenerating(false)
+      setLocalGenerating(false)
+      setAiOverlayVisible(false)
     }
   }
 
