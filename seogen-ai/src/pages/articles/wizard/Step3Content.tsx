@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { invoke } from '../../../lib/api'
 import { useAppStore } from '../../../stores/app.store'
 import { ArticleContentEditor } from '../components/ArticleContentEditor'
-import { buildIntroUserPrompt, buildChunkUserPrompt } from '../../../lib/prompts'
+import { buildIntroUserPrompt, buildBatchChunkUserPrompt } from '../../../lib/prompts'
 import { ButtonGenAI, Button } from '../../../components/ui'
 
 // Helper function sleep
@@ -38,9 +38,17 @@ export default function Step3Content(props: any) {
     
     let generatedContent = ''
 
+    const BATCH_SIZE = 5;
+    const outlineWithIndex = outlines.map((item: any, index: number) => ({ ...item, index }));
+    const batches: typeof outlineWithIndex[] = [];
+    for (let i = 0; i < outlineWithIndex.length; i += BATCH_SIZE) {
+      batches.push(outlineWithIndex.slice(i, i + BATCH_SIZE));
+    }
+    const totalSteps = batches.length + 2;
+
     // 1. Sinh Phần mở đầu (Hook & Intro) có chứa Keywords và EEAT
     try {
-      setAiOverlayStep(`[1/${outlines.length + 2}] Đang viết phần Mở Bài (Intro)...`)
+      setAiOverlayStep(`[1/${totalSteps}] Đang viết phần Mở Bài (Intro)...`)
       const introPrompt = buildIntroUserPrompt(
         data.title, data.campaign_summary, data.eeat_summary,
         data.secondary_keywords, data.tone_of_voice, data.output_language
@@ -55,32 +63,31 @@ export default function Step3Content(props: any) {
       if (!abortRef.current) setToast({ message: 'Lỗi sinh phần Intro, tiếp tục các phần khác...', type: 'info' })
     }
 
-    // 2. Loop qua toàn bộ Dàn ý (H2, H3)
-    for (let i = 0; i < outlines.length; i++) {
+    // 2. Gom nhóm Dàn ý (Batching)
+    for (let i = 0; i < batches.length; i++) {
       if (abortRef.current) break
-      const item = outlines[i]
-      const tagName = `h${item.level || 2}`
+      const batch = batches[i]
       
-      setAiOverlayStep(`[${i + 2}/${outlines.length + 2}] Đang viết chi tiết mục: ${item.title}...`)
+      setAiOverlayStep(`[${i + 2}/${totalSteps}] Đang viết nhóm ${i + 1}/${batches.length} (mục ${batch[0].index + 1}-${batch[batch.length - 1].index + 1})...`)
       
-      const chunkPrompt = buildChunkUserPrompt(
-        data.title, tagName, item.title, i,
+      const batchPrompt = buildBatchChunkUserPrompt(
+        data.title, batch,
         data.tone_of_voice, data.output_language
       )
 
       try {
         const resChunk = await invoke<{success: boolean, content: string}>('ai:generate', {
-          messages: [{ role: 'system', content: 'You are an SEO expert writer. Output clean HTML.' }, { role: 'user', content: chunkPrompt }]
+          messages: [{ role: 'system', content: 'You are an SEO expert writer. Output clean HTML.' }, { role: 'user', content: batchPrompt }]
         })
         if (resChunk.success) {
-           generatedContent += `\n<!-- SECTION ${i} -->\n${resChunk.content.replace(/```html|```/g, '').trim()}\n`
+           generatedContent += `\n${resChunk.content.replace(/```html|```/g, '').trim()}\n`
         }
       } catch (e) {
-        if (!abortRef.current) setToast({ message: `Lỗi sinh mục ${item.title}`, type: 'info' })
+        if (!abortRef.current) setToast({ message: `Lỗi sinh nhóm ${i + 1}`, type: 'info' })
       }
 
-      // Ngủ 1s để giảm tải rate limit
-      await sleep(1000)
+      // Ngủ 1.5s để giảm tải rate limit
+      await sleep(1500)
     }
 
     // 3. Sinh FAQ Schema phần QnA
@@ -88,7 +95,7 @@ export default function Step3Content(props: any) {
     try { qnaArr = typeof data.qna_list === 'string' ? JSON.parse(data.qna_list) : data.qna_list } catch(e){}
 
     if (!abortRef.current && Array.isArray(qnaArr) && qnaArr.length > 0) {
-      setAiOverlayStep(`[${outlines.length + 2}/${outlines.length + 2}] Đang tạo cấu trúc Q&A Schema...`)
+      setAiOverlayStep(`[${totalSteps}/${totalSteps}] Đang tạo cấu trúc Q&A Schema...`)
       
       let faqHtml = `\n<!-- FAQ SECTION -->\n<div class="article-faq" itemscope itemtype="https://schema.org/FAQPage">\n<h2 id="faq-section">Câu hỏi thường gặp</h2>\n`
       

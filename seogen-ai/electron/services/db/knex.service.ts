@@ -126,8 +126,8 @@ export async function runMigrations(store: Store): Promise<void> {
       t.integer('persona_id').unsigned().references('id').inTable('personas').onDelete('SET NULL').nullable()
       t.string('title', 500)
       t.string('slug', 500)
-      t.text('content_html')
-      t.text('content_text')
+      t.text('content_html', 'longtext')
+      t.text('content_text', 'longtext')
       t.string('meta_title', 70)
       t.string('meta_description', 300)
       t.enum('meta_title_status', ['auto', 'edited', 'approved']).defaultTo('auto')
@@ -140,20 +140,20 @@ export async function runMigrations(store: Store): Promise<void> {
       t.integer('campaign_id').unsigned().references('id').inTable('campaigns').onDelete('CASCADE').nullable()
       t.integer('week_number').defaultTo(1)
       t.string('keyword', 500)
-      t.text('content_social')
+      t.text('content_social', 'longtext')
       t.text('thumbnail_prompt')
       t.integer('current_step').defaultTo(1)
       t.integer('highest_unlocked_step').defaultTo(1)
-      t.text('campaign_summary')
+      t.text('campaign_summary', 'longtext')
       t.string('tone_of_voice', 100)
-      t.string('target_audience', 255)
+      t.text('target_audience', 'longtext')
       t.string('output_language', 50)
-      t.text('primary_keywords') // stored as JSON string
-      t.text('secondary_keywords') // stored as JSON string
-      t.text('keyword_placement_rules') // stored as JSON string
-      t.text('eeat_summary')
-      t.text('qna_list') // stored as JSON string
-      t.text('outline_data') // stored as JSON string
+      t.text('primary_keywords', 'longtext') // stored as JSON string
+      t.text('secondary_keywords', 'longtext') // stored as JSON string
+      t.text('keyword_placement_rules', 'longtext') // stored as JSON string
+      t.text('eeat_summary', 'longtext')
+      t.text('qna_list', 'longtext') // stored as JSON string
+      t.text('outline_data', 'longtext') // stored as JSON string
       t.timestamps(true, true)
     })
   } else {
@@ -185,17 +185,39 @@ export async function runMigrations(store: Store): Promise<void> {
       await knex.schema.table('articles', t => {
         t.integer('current_step').defaultTo(1)
         t.integer('highest_unlocked_step').defaultTo(1)
-        t.text('campaign_summary')
+        t.text('campaign_summary', 'longtext')
         t.string('tone_of_voice', 100)
-        t.string('target_audience', 255)
+        t.text('target_audience', 'longtext')
         t.string('output_language', 50)
-        t.text('primary_keywords')
-        t.text('secondary_keywords')
-        t.text('keyword_placement_rules')
-        t.text('eeat_summary')
-        t.text('qna_list')
-        t.text('outline_data')
+        t.text('primary_keywords', 'longtext')
+        t.text('secondary_keywords', 'longtext')
+        t.text('keyword_placement_rules', 'longtext')
+        t.text('eeat_summary', 'longtext')
+        t.text('qna_list', 'longtext')
+        t.text('outline_data', 'longtext')
       })
+    }
+
+    // Force alter some fields to longtext if they are not already longtext (mostly for MySQL)
+    if (knex.client.config.client === 'mysql2' || knex.client.config.client === 'mysql') {
+      try {
+         await knex.raw(`
+           ALTER TABLE articles 
+           MODIFY COLUMN content_html LONGTEXT,
+           MODIFY COLUMN content_text LONGTEXT,
+           MODIFY COLUMN content_social LONGTEXT,
+           MODIFY COLUMN campaign_summary LONGTEXT,
+           MODIFY COLUMN target_audience LONGTEXT,
+           MODIFY COLUMN primary_keywords LONGTEXT,
+           MODIFY COLUMN secondary_keywords LONGTEXT,
+           MODIFY COLUMN keyword_placement_rules LONGTEXT,
+           MODIFY COLUMN eeat_summary LONGTEXT,
+           MODIFY COLUMN qna_list LONGTEXT,
+           MODIFY COLUMN outline_data LONGTEXT
+         `)
+      } catch (e) {
+         console.error('Lỗi khi nâng cấp cột bài viết lên LONGTEXT:', e)
+      }
     }
   }
 

@@ -193,8 +193,13 @@ export default function ArticleIndex() {
         filters={[{ key: 'status', placeholder: 'Trạng thái', options: STATUS_OPTS }]}
         extraInputs={[{ key: 'campaign_id', placeholder: 'Mã chiến dịch (ID)' }]}
         sorts={[
-          { key: 'created_at', label: 'Ngày tạo' },
+          { key: 'id', label: 'Mã (ID)' },
+          { key: 'title', label: 'Tiêu đề bài viết' },
+          { key: 'article_type', label: 'Loại bài viết' },
+          { key: 'week_number', label: 'Tuần' },
+          { key: 'status', label: 'Trạng thái' },
           { key: 'seo_score', label: 'Điểm SEO' },
+          { key: 'created_at', label: 'Ngày tạo' },
         ]}
         createLabel="Tạo bài viết mới"
         onCreateClick={() => navigate('/article/create')}

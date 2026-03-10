@@ -100,9 +100,14 @@ export function registerArticleIpc(store: Store) {
   })
 
   ipcMain.handle('article:update', async (_e, { id, ...data }: { id: number;[key: string]: unknown }) => {
-    const db = getKnex()
-    await db('articles').where({ id }).update({ ...data, updated_at: db.fn.now() })
-    return db('articles').where({ id }).first()
+    try {
+      const db = getKnex()
+      await db('articles').where({ id }).update({ ...data, updated_at: db.fn.now() })
+      const updated = await db('articles').where({ id }).first()
+      return { success: true, article: updated }
+    } catch (e: any) {
+      return { success: false, error: e.message }
+    }
   })
 
   ipcMain.handle('article:delete', async (_e, id: number) => {

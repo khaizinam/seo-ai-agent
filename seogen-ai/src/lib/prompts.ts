@@ -168,6 +168,33 @@ REQUIREMENTS:
 4. Return ONLY clean HTML code. Do NOT wrap in <html> or <body>.`
 }
 
+export function buildBatchChunkUserPrompt(
+  title: string,
+  headings: Array<{ level: number; title: string; index: number }>,
+  toneOfVoice: string,
+  lang = 'Vietnamese'
+): string {
+  const headingsList = headings
+    .map(h => `${h.index + 1}. H${h.level || 2}: "${h.title}" (id: heading-${h.index})`)
+    .join('\n')
+
+  return `Write content for MULTIPLE sections of the article "${title}".
+Tone: ${toneOfVoice}. Output language: ${lang}.
+
+SECTIONS TO WRITE (IN ORDER):
+${headingsList}
+
+REQUIREMENTS:
+1. Write ALL sections strictly in the order listed above.
+2. Format as HTML.
+3. Each section MUST start with an exact HTML comment marker: <!-- SECTION {id} --> where {id} is the heading id number (e.g., <!-- SECTION ${headings[0].index} -->).
+4. Follow the comment marker with the appropriate heading tag (e.g., <h${headings[0].level || 2} id="heading-${headings[0].index}">${headings[0].title}</h${headings[0].level || 2}>).
+5. Follow the heading with detailed paragraphs (<p>), lists (<ul>), etc.
+6. Keep paragraphs short and concise, and focus closely on the heading topic.
+7. Return ONLY clean HTML code. Do NOT wrap in <html> or <body>.`
+}
+
+
 // ─── Social Content Generation ───
 
 export function buildSocialSystemPrompt(personaName?: string, lang = 'Vietnamese'): string {

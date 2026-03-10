@@ -157,12 +157,18 @@ export default function ArticleWizard() {
     try {
       if (id || plannedId || articleData.id) {
         payload.id = +(id || plannedId || articleData.id)
-        await invoke('article:update', payload)
+        const res = await invoke<{success: boolean; error?: string; article?: any}>('article:update', payload)
+        if (res && res.success === false) {
+           throw new Error(res.error || 'Lỗi lưu dữ liệu')
+        }
       } else {
          // Create Draft internally
          if (!payload.title) payload.title = updates.title || articleData.title || 'Bài viết mới (Bản nháp)'
-         const saved = await invoke<{ id?: number }>('article:create', payload)
-         if (saved.id && !id && !plannedId && !articleData.id) {
+         const saved = await invoke<{ id?: number; success?: boolean; error?: string }>('article:create', payload)
+         if (saved && saved.success === false) {
+            throw new Error(saved.error || 'Lỗi tạo bài viết')
+         }
+         if (saved && saved.id && !id && !plannedId && !articleData.id) {
            // We might want to replaceUrl to prevent multi creation, but for now we just keep id state somehow
            // Let's force an update to URL if needed, or better just use history.replaceState
            window.history.replaceState(null, '', `#/article/edit/${saved.id}`)
@@ -170,17 +176,21 @@ export default function ArticleWizard() {
            updateData({ id: saved.id }) // Sync ID to state
          }
       }
-    } catch (e) {
+      return { success: true, payload }
+    } catch (e: any) {
       console.error('AutoSave Error: ', e)
+      setToast({ message: `Lỗi lưu dữ liệu: ${e.message}`, type: 'error' })
+      return { success: false, error: e.message }
     }
-    return payload
   }
 
   const handleNextStep = async (stepId: number, stepUpdates: Partial<typeof articleData>) => {
     const nextStep = stepId + 1
     const maxUnlocked = Math.max(articleData.highest_unlocked_step, nextStep)
-    await autoSave({ ...stepUpdates, current_step: nextStep, highest_unlocked_step: maxUnlocked })
-    setToast({ message: 'Đã lưu dũ liệu Bước ' + stepId, type: 'success' })
+    const result = await autoSave({ ...stepUpdates, current_step: nextStep, highest_unlocked_step: maxUnlocked })
+    if (result && result.success) {
+      setToast({ message: 'Đã lưu dũ liệu Bước ' + stepId, type: 'success' })
+    }
   }
 
   const handleExit = () => navigate('/article')
@@ -318,8 +328,21 @@ export default function ArticleWizard() {
              plannedKeywordName={articleData.keyword || articleData.keyword_from_db || ''}
              isEdit={isEdit} plannedId={plannedId}
              saving={saving} generating={generating}
-             onSave={() => autoSave({})}
-             onSaveAndExit={async () => { await autoSave({}); handleExit() }}
+             onSave={async () => {
+               setSaving(true)
+               const res = await autoSave({})
+               setSaving(false)
+               if (res && res.success) setToast({ message: 'Đã lưu bài viết thành công!', type: 'success' })
+             }}
+             onSaveAndExit={async () => {
+                setSaving(true)
+                const res = await autoSave({})
+                setSaving(false)
+                if (res && res.success) {
+                   setToast({ message: 'Đã lưu bài viết thành công!', type: 'success' })
+                   handleExit()
+                }
+             }}
              onExit={handleExit}
              onGenFull={() => setToast({message: "Đang Gen full", type: 'info'})}
              onPublish={() => setShowPublishModal(true)}
