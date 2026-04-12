@@ -14,6 +14,31 @@ export function stripHtmlToText(html: string, maxLength = 1500): string {
     .trim()
     .substring(0, maxLength)
 }
+
+/**
+ * Helper: Add hierarchical numbering (1, 1.1, 1.1.1) to outline titles.
+ * Standardizes numbering for both one-shot and chunked generation.
+ */
+export function addNumberingToOutline(outlines: any[]) {
+  const levels = [0, 0, 0, 0, 0, 0] // Counts for H1-H6
+  return outlines.map((item) => {
+    const level = Math.max(2, Math.min(6, item.level || 2))
+    levels[level - 1]++
+    for (let i = level; i < 6; i++) levels[i] = 0
+
+    const parts = levels.slice(1, level)
+    const numbering = parts.join('.')
+    const label = level === 2 ? `${numbering}.` : numbering
+
+    // Clean existing numbering if any, then prepend new label
+    const cleanTitle = item.title.replace(/^[\d.]+\s+/, '').trim()
+    return {
+      ...item,
+      title: `${label} ${cleanTitle}`,
+      numbering: label
+    }
+  })
+}
 // ─── Article Generation ───
 
 export function buildArticleSystemPrompt(personaName?: string, lang = 'Vietnamese'): string {
@@ -54,8 +79,10 @@ SEO & KEYWORD RULES:
 
 CONTENT STRUCTURE:
 - Start with an engaging hook (2-3 sentences that capture attention — a question, a surprising fact, or a pain point).
+- **Table of Contents**: Immediately after the hook, provide a "Mục lục" (Table of Contents) using an unnumbered list (<ul>) with anchor links to all H2-H3 headings (e.g., <a href="#heading-0">1. Section Title</a>).
 - Organize into clear sections with H2/H3 headings. Use H4-H6 for deeper subsections when needed.
-- Flow: Hook intro → Problem/Context → Main content sections → Practical examples/data → Conclusion with CTA.
+- **Hierarchical Numbering**: Manually number all headings (1., 1.1., 1.2., 2., etc.).
+- Flow: Hook intro → Table of Contents → Problem/Context → Main content sections → Practical examples/data → Conclusion with CTA.
 - End with a strong conclusion that summarizes key takeaways and includes a subtle call-to-action.
 - Use smooth transition phrases between sections for natural reading flow.
 
@@ -72,6 +99,7 @@ READABILITY:
 HTML FORMAT RULES:
 - HTML format only (no <html><body> wrappers, inner content only).
 - Use H2-H6 headings. Do NOT use H1.
+- Each heading MUST have a unique ID matching the Table of Contents links (e.g., <h2 id="heading-0">...</h2>).
 - By default, use well-structured paragraphs (<p>) instead of list tags.
 - EXCEPTION: For technical/tutorial/report content that naturally requires enumeration, you MAY use <ul>/<ol>/<li> with inline CSS:
   <ul style="padding-left:20px;margin:12px 0;list-style-type:disc">
@@ -136,18 +164,30 @@ export function buildIntroUserPrompt(
   eeatSummary: string,
   secondaryKeywords: string,
   toneOfVoice: string,
-  lang = 'Vietnamese'
+  lang = 'Vietnamese',
+  headings?: Array<{ level: number; title: string; index: number }>
 ): string {
+  const tocBlock = headings && headings.length > 0
+    ? `\nTABLE OF CONTENTS REQUIREMENT:
+Immediately after the introduction paragraphs, generate a "Mục lục" (Table of Contents) section.
+- Use a <ul> list.
+- Each item must be an anchor link to the respective heading ID (e.g., <a href="#heading-0">1. Title</a>).
+- Include all the following headings in the ToC:
+${headings.map(h => `- ${h.title} (ID: heading-${h.index})`).join('\n')}`
+    : ''
+
   return `Write the introduction for: "${title}"
 Campaign context: ${campaignSummary}
 E-E-A-T details: ${eeatSummary}
 Secondary keywords: ${secondaryKeywords}
+${tocBlock}
 
 REQUIREMENTS:
 1. Write 2-3 short paragraphs with an engaging hook.
-2. Tone: ${toneOfVoice}. Output language: ${lang}.
-3. Format as plain HTML <p> tags only. NO H1, NO H2.
-4. Return ONLY clean HTML code, no markdown wrappers, no explanations.`
+2. If Table of Contents is requested above, include it immediately after the intro paragraphs.
+3. Tone: ${toneOfVoice}. Output language: ${lang}.
+4. Format as plain HTML (<p> and <ul> for ToC). NO H1, NO H2 in this section.
+5. Return ONLY clean HTML code, no markdown wrappers, no explanations.`
 }
 
 export function buildChunkUserPrompt(
@@ -163,9 +203,10 @@ Tone: ${toneOfVoice}. Output language: ${lang}.
 
 REQUIREMENTS:
 1. Format as HTML. MUST START with: <${headingLevel} id="heading-${headingIndex}">${headingTitle}</${headingLevel}>.
-2. Follow with detailed paragraphs (<p>), lists (<ul>), etc.
-3. Keep paragraphs short and concise.
-4. Return ONLY clean HTML code. Do NOT wrap in <html> or <body>.`
+2. Ensure the heading title includes the correct hierarchical numbering (e.g. "1. ", "1.1. ") as provided in the heading title.
+3. Follow with detailed paragraphs (<p>), lists (<ul>), etc.
+4. Keep paragraphs short and concise.
+5. Return ONLY clean HTML code. Do NOT wrap in <html> or <body>.`
 }
 
 export function buildBatchChunkUserPrompt(
@@ -190,8 +231,9 @@ REQUIREMENTS:
 3. Each section MUST start with an exact HTML comment marker: <!-- SECTION {id} --> where {id} is the heading id number (e.g., <!-- SECTION ${headings[0].index} -->).
 4. Follow the comment marker with the appropriate heading tag (e.g., <h${headings[0].level || 2} id="heading-${headings[0].index}">${headings[0].title}</h${headings[0].level || 2}>).
 5. Follow the heading with detailed paragraphs (<p>), lists (<ul>), etc.
-6. Keep paragraphs short and concise, and focus closely on the heading topic.
-7. Return ONLY clean HTML code. Do NOT wrap in <html> or <body>.`
+6. Ensure each heading includes its hierarchical numbering as provided in the list.
+7. Keep paragraphs short and concise, and focus closely on the heading topic.
+8. Return ONLY clean HTML code. Do NOT wrap in <html> or <body>.`
 }
 
 

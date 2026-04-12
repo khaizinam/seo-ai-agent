@@ -85,8 +85,9 @@ SEO & KEYWORD RULES:
 
 CONTENT STRUCTURE:
 - Start with an engaging hook (question, surprising fact, or pain point) — 2-3 sentences.
-- NO Table of Contents. NO generic blog intro. Jump into value immediately.
-- Flow: Hook → Problem/Context → Main sections (H2/H3) → Examples/Data → Conclusion + CTA.
+- **Table of Contents**: Immediately after the hook, provide a "Mục lục" (Table of Contents) using an unnumbered list (<ul>) with anchor links to all H2-H3 headings (e.g., <a href="#h-1">1. Section Title</a>).
+- **Hierarchical Numbering**: Manually number all headings (1., 1.1., 2., etc.).
+- Flow: Hook → Table of Contents → Problem/Context → Main sections (H2/H3) → Examples/Data → Conclusion + CTA.
 - End with a strong conclusion summarizing key takeaways + subtle call-to-action.
 - Use smooth transitions between sections.
 
@@ -103,7 +104,7 @@ READABILITY:
 HTML FORMAT:
 1. No Markdown. HTML only.
 2. Allowed tags: <h2>, <h3>, <h4>, <h5>, <h6>, <p>, <a>, <strong>.
-3. Use H2-H6. Do NOT use H1 (reserved for page title).
+3. Use H2-H6. Do NOT use H1. Each heading MUST have a unique ID matching the ToC (e.g., <h2 id="h-1">).
 4. By default, use paragraphs (<p>) instead of list tags.
 5. EXCEPTION: For technical/tutorial/report content requiring enumeration, you MAY use <ul>/<ol>/<li> with inline CSS:
    <ul style="padding-left:20px;margin:12px 0;list-style-type:disc"><li style="margin-bottom:8px;line-height:1.6">...</li></ul>

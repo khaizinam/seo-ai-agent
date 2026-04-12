@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { invoke } from '../../../lib/api'
 import { useAppStore } from '../../../stores/app.store'
 import { ArticleContentEditor } from '../components/ArticleContentEditor'
-import { buildIntroUserPrompt, buildBatchChunkUserPrompt } from '../../../lib/prompts'
+import { buildIntroUserPrompt, buildBatchChunkUserPrompt, addNumberingToOutline } from '../../../lib/prompts'
 import { ButtonGenAI, Button } from '../../../components/ui'
 
 // Helper function sleep
@@ -26,11 +26,13 @@ export default function Step3Content(props: any) {
   }
 
   const handleGenContentChunking = async () => {
-    const outlines = getOutlineArray()
-    if (outlines.length === 0) {
+    const rawOutlines = getOutlineArray()
+    if (rawOutlines.length === 0) {
       setToast({ message: 'Không có thông tin Dàn ý. Vui lòng quay lại Bước 2 và sinh Dàn ý trước!', type: 'error' })
       return
     }
+
+    const outlines = addNumberingToOutline(rawOutlines);
 
     abortRef.current = false
     setGenerating(true)
@@ -51,7 +53,8 @@ export default function Step3Content(props: any) {
       setAiOverlayStep(`[1/${totalSteps}] Đang viết phần Mở Bài (Intro)...`)
       const introPrompt = buildIntroUserPrompt(
         data.title, data.campaign_summary, data.eeat_summary,
-        data.secondary_keywords, data.tone_of_voice, data.output_language
+        data.secondary_keywords, data.tone_of_voice, data.output_language,
+        outlines.map((h, i) => ({ level: h.level, title: h.title, index: i }))
       )
 
       const resIntro = await invoke<{success: boolean, content: string}>('ai:generate', {
