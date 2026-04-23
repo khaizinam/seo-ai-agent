@@ -4,7 +4,7 @@ import axios from 'axios'
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { readdir, unlink } from 'fs/promises'
-import { getKnex } from '../services/db/knex.service'
+import { getKnex, ensureConnection } from '../services/db/knex.service'
 import { buildFullArticlePrompt } from '../lib/prompts'
 import { DEFAULT_PERSONAS } from '../lib/persona-seeds'
 
@@ -60,7 +60,7 @@ export function registerArticleIpc(store: Store) {
 
   // ---------- ARTICLES ----------
   ipcMain.handle('article:list', async (_e, filters?: { status?: string; campaign_id?: number }) => {
-    const db = getKnex()
+    const db = await ensureConnection(store)
     let q = db('articles')
       .leftJoin('keywords', 'articles.keyword_id', 'keywords.id')
       .leftJoin('personas', 'articles.persona_id', 'personas.id')
@@ -80,7 +80,7 @@ export function registerArticleIpc(store: Store) {
   })
 
   ipcMain.handle('article:get', async (_e, id: number) => {
-    const db = getKnex()
+    const db = await ensureConnection(store)
     return db('articles')
       .leftJoin('keywords', 'articles.keyword_id', 'keywords.id')
       .leftJoin('personas', 'articles.persona_id', 'personas.id')

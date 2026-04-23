@@ -57,6 +57,31 @@ export function getKnex(): KnexType {
   return knexInstance
 }
 
+export async function ensureConnection(store: Store): Promise<KnexType> {
+  if (!knexInstance) {
+    const config = store.get('dbConfig') as DBConfig | undefined
+    if (config) {
+      await connectDB(config)
+    }
+  }
+  
+  if (knexInstance) {
+    try {
+      await knexInstance.raw('SELECT 1')
+    } catch (e: any) {
+      if (e.code === 'ECONNRESET' || e.fatal) {
+        console.log('DB connection lost, attempting to reconnect...')
+        const config = store.get('dbConfig') as DBConfig | undefined
+        if (config) {
+          await connectDB(config)
+        }
+      }
+    }
+  }
+  
+  return getKnex()
+}
+
 export async function runMigrations(store: Store): Promise<void> {
   const config = store.get('dbConfig') as DBConfig | undefined
   if (!config) return
@@ -195,6 +220,13 @@ export async function runMigrations(store: Store): Promise<void> {
         t.text('eeat_summary', 'longtext')
         t.text('qna_list', 'longtext')
         t.text('outline_data', 'longtext')
+        t.text('internal_links', 'longtext')
+      })
+    }
+
+    if (!(await knex.schema.hasColumn('articles', 'internal_links'))) {
+      await knex.schema.table('articles', t => {
+        t.text('internal_links', 'longtext')
       })
     }
 
@@ -213,7 +245,8 @@ export async function runMigrations(store: Store): Promise<void> {
            MODIFY COLUMN keyword_placement_rules LONGTEXT,
            MODIFY COLUMN eeat_summary LONGTEXT,
            MODIFY COLUMN qna_list LONGTEXT,
-           MODIFY COLUMN outline_data LONGTEXT
+           MODIFY COLUMN outline_data LONGTEXT,
+           MODIFY COLUMN internal_links LONGTEXT
          `)
       } catch (e) {
          console.error('Lỗi khi nâng cấp cột bài viết lên LONGTEXT:', e)
@@ -258,6 +291,24 @@ export async function runMigrations(store: Store): Promise<void> {
       t.timestamps(true, true)
     })
   }
+
+  // ai_logs
+  if (!(await knex.schema.hasTable('ai_logs'))) {
+    await knex.schema.createTable('ai_logs', (t) => {
+      t.increments('id').primary()
+      t.string('provider', 50)
+      t.string('model', 100)
+      t.text('messages', 'longtext')
+      t.text('response', 'longtext')
+      t.integer('duration_ms')
+      t.string('status', 20) // success, error
+      t.text('error_message')
+      t.integer('prompt_tokens')
+      t.integer('completion_tokens')
+      t.integer('total_tokens')
+      t.timestamp('created_at').defaultTo(knex.fn.now())
+    })
+  }
 }
 
 export async function resetDB(store: Store): Promise<{ success: boolean; message: string }> {
@@ -271,7 +322,7 @@ export async function resetDB(store: Store): Promise<{ success: boolean; message
       // In PG we can use DROP TABLE ... CASCADE or just drop in order
     }
 
-    const tables = ['webhooks', 'seo_audits', 'articles', 'keywords', 'campaigns', 'personas', 'thumbnail_prompts']
+    const tables = ['ai_logs', 'webhooks', 'seo_audits', 'articles', 'keywords', 'campaigns', 'personas', 'thumbnail_prompts']
     for (const table of tables) {
       await knex.schema.dropTableIfExists(table)
     }

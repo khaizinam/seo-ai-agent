@@ -51,19 +51,29 @@ export default function Step3Content(props: any) {
     // 1. Sinh Phần mở đầu (Hook & Intro) có chứa Keywords và EEAT
     try {
       setAiOverlayStep(`[1/${totalSteps}] Đang viết phần Mở Bài (Intro)...`)
+      // Format secondary keywords for the prompt
+      let keywordsStr = data.secondary_keywords || ''
+      try {
+        const parsed = typeof data.secondary_keywords === 'string' ? JSON.parse(data.secondary_keywords) : data.secondary_keywords
+        if (Array.isArray(parsed)) keywordsStr = parsed.join(', ')
+      } catch (e) {
+        keywordsStr = data.secondary_keywords || ''
+      }
+
       const introPrompt = buildIntroUserPrompt(
         data.title, data.campaign_summary, data.eeat_summary,
-        data.secondary_keywords, data.tone_of_voice, data.output_language,
-        outlines.map((h, i) => ({ level: h.level, title: h.title, index: i }))
+        keywordsStr, data.tone_of_voice, data.output_language,
+        outlines.map((h, i) => ({ level: h.level, title: h.title, index: i })),
+        data.internal_links
       )
 
-      const resIntro = await invoke<{success: boolean, content: string}>('ai:generate', {
+      const resIntro = await invoke<{success: boolean, content: string, error?: string}>('ai:generate', {
         messages: [{ role: 'system', content: 'You are an SEO expert writer. Output clean HTML.' }, { role: 'user', content: introPrompt }]
       })
-      if (!resIntro.success) throw new Error()
+      if (!resIntro.success) throw new Error(resIntro.error || 'Unknown AI error')
       generatedContent += `\n<!-- INTRO -->\n<div class="article-intro">\n${resIntro.content.replace(/```html|```/g, '').trim()}\n</div>\n`
-    } catch (e) {
-      if (!abortRef.current) setToast({ message: 'Lỗi sinh phần Intro, tiếp tục các phần khác...', type: 'info' })
+    } catch (e: any) {
+      if (!abortRef.current) setToast({ message: `Lỗi sinh phần Intro: ${e.message}`, type: 'error' })
     }
 
     // 2. Gom nhóm Dàn ý (Batching)
@@ -73,13 +83,24 @@ export default function Step3Content(props: any) {
       
       setAiOverlayStep(`[${i + 2}/${totalSteps}] Đang viết nhóm ${i + 1}/${batches.length} (mục ${batch[0].index + 1}-${batch[batch.length - 1].index + 1})...`)
       
+      // Format secondary keywords for the prompt
+      let keywordsStr = data.secondary_keywords || ''
+      try {
+        const parsed = typeof data.secondary_keywords === 'string' ? JSON.parse(data.secondary_keywords) : data.secondary_keywords
+        if (Array.isArray(parsed)) keywordsStr = parsed.join(', ')
+      } catch (e) {
+        keywordsStr = data.secondary_keywords || ''
+      }
+
       const batchPrompt = buildBatchChunkUserPrompt(
         data.title, batch,
-        data.tone_of_voice, data.output_language
+        keywordsStr,
+        data.tone_of_voice, data.output_language,
+        data.internal_links
       )
 
       try {
-        const resChunk = await invoke<{success: boolean, content: string}>('ai:generate', {
+        const resChunk = await invoke<{success: boolean, content: string, error?: string}>('ai:generate', {
           messages: [{ role: 'system', content: 'You are an SEO expert writer. Output clean HTML.' }, { role: 'user', content: batchPrompt }]
         })
         if (resChunk.success) {
@@ -116,9 +137,9 @@ export default function Step3Content(props: any) {
     }
 
     // 4. Wrap with article tag and finalize
-    if (!abortRef.current && generatedContent) {
-       const finalHtml = `<article class="seo-article">\n${generatedContent}\n</article>`
-       setContentHtml(finalHtml)
+     if (!abortRef.current && generatedContent) {
+        const finalHtml = generatedContent.trim()
+        setContentHtml(finalHtml)
        setToast({ message: 'Đã hoàn tất quá trình sinh bài viết.', type: 'success' })
        
        // Tự động lưu DB lại

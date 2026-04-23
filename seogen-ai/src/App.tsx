@@ -1,7 +1,7 @@
 import { HashRouter, Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Target, Users, FileText, Image, BarChart3,
-  Settings, ChevronRight, Zap, Database, Globe, AlertTriangle, ImageDown, Link2
+  Settings, ChevronRight, Zap, Database, Globe, AlertTriangle, ImageDown, Link2, History
 } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import CampaignIndex from './pages/campaigns/CampaignIndex'
@@ -15,6 +15,7 @@ import SettingsPage from './pages/Settings'
 import ImageConverterPage from './pages/ImageConverter'
 import WebhookIndex from './pages/webhooks/WebhookIndex';
 import WebhookForm from './pages/webhooks/WebhookForm';
+import AiHistory from './pages/AiHistory'
 import { useAppStore } from './stores/app.store'
 import { Toast } from './components/ui/Toast'
 import { useEffect } from 'react'
@@ -26,6 +27,7 @@ const NAV_MAIN = [
   { to: '/article', icon: FileText, label: 'Bài viết' },
   { to: '/webhook', icon: Link2, label: 'Webhooks' },
   { to: '/audit', icon: BarChart3, label: 'SEO Audit' },
+  { to: '/ai-history', icon: History, label: 'Lịch sử' },
   { to: '/thumbnail', icon: Image, label: 'Thumbnail AI' },
   { to: '/persona', icon: Users, label: 'Nhân vật viết bài' },
 ]
@@ -216,6 +218,7 @@ export default function App() {
                 <Route path="/article" element={<ArticleIndex />} />
                 <Route path="/article/create" element={<ArticleWizard />} />
                 <Route path="/article/edit/:id" element={<ArticleWizard />} />
+                <Route path="/ai-history" element={<AiHistory />} />
                 <Route path="/thumbnail" element={<ThumbnailPage />} />
                 <Route path="/audit" element={<AuditPage />} />
                 <Route path="/webhook" element={<WebhookIndex />} />

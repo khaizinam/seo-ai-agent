@@ -165,8 +165,36 @@ export function buildIntroUserPrompt(
   secondaryKeywords: string,
   toneOfVoice: string,
   lang = 'Vietnamese',
-  headings?: Array<{ level: number; title: string; index: number }>
+  headings?: Array<{ level: number; title: string; index: number }>,
+  internalLinks?: string
 ): string {
+  let internalLinksBlock = ''
+  if (internalLinks) {
+    let links: any[] = []
+    if (Array.isArray(internalLinks)) {
+      links = internalLinks
+    } else if (typeof internalLinks === 'string') {
+      try {
+        const parsed = JSON.parse(internalLinks)
+        if (Array.isArray(parsed)) links = parsed
+      } catch (e) {
+        // Not a JSON string, maybe just a plain string
+        if (internalLinks.trim()) {
+          internalLinksBlock = `\nINTERNAL LINKS TO INCLUDE (NATURALLY):\n${internalLinks}`
+        }
+      }
+    }
+
+    if (links.length > 0) {
+      internalLinksBlock = `\nINTERNAL LINKS TO INCLUDE (NATURALLY):
+Use these links as anchor texts within the content where it makes sense (e.g., related topics, further reading). Use <a> tags.
+${links.map(l => {
+  const formattedUrl = (l.url || '').startsWith('http') || (l.url || '').startsWith('/') ? l.url : `/${l.url}`
+  return `- URL: ${formattedUrl}, Anchor Text: ${l.title}`
+}).join('\n')}`
+    }
+  }
+
   const tocBlock = headings && headings.length > 0
     ? `\nTABLE OF CONTENTS REQUIREMENT:
 Immediately after the introduction paragraphs, generate a "Mục lục" (Table of Contents) section.
@@ -179,15 +207,20 @@ ${headings.map(h => `- ${h.title} (ID: heading-${h.index})`).join('\n')}`
   return `Write the introduction for: "${title}"
 Campaign context: ${campaignSummary}
 E-E-A-T details: ${eeatSummary}
-Secondary keywords: ${secondaryKeywords}
+Secondary keywords: ${secondaryKeywords || 'N/A'}
 ${tocBlock}
+${internalLinksBlock}
 
 REQUIREMENTS:
 1. Write 2-3 short paragraphs with an engaging hook.
-2. If Table of Contents is requested above, include it immediately after the intro paragraphs.
-3. Tone: ${toneOfVoice}. Output language: ${lang}.
-4. Format as plain HTML (<p> and <ul> for ToC). NO H1, NO H2 in this section.
-5. Return ONLY clean HTML code, no markdown wrappers, no explanations.`
+2. Include the main keyword (from the title: "${title}") naturally within the first 100 words.
+3. If Table of Contents is requested above, include it immediately after the intro paragraphs.
+4. Tone: ${toneOfVoice}. Output language: ${lang}.
+5. If internal links are provided, insert them naturally using <a> tags.
+6. STRICT RULE: DO NOT add any other internal or external links besides the ones provided.
+7. Integrate the provided secondary keywords naturally.
+8. Format as HTML. Use H2-H6 if needed for sub-sections, but DO NOT use H1.
+9. Return ONLY clean HTML code, no markdown wrappers, no explanations.`
 }
 
 export function buildChunkUserPrompt(
@@ -204,23 +237,55 @@ Tone: ${toneOfVoice}. Output language: ${lang}.
 REQUIREMENTS:
 1. Format as HTML. MUST START with: <${headingLevel} id="heading-${headingIndex}">${headingTitle}</${headingLevel}>.
 2. Ensure the heading title includes the correct hierarchical numbering (e.g. "1. ", "1.1. ") as provided in the heading title.
-3. Follow with detailed paragraphs (<p>), lists (<ul>), etc.
-4. Keep paragraphs short and concise.
-5. Return ONLY clean HTML code. Do NOT wrap in <html> or <body>.`
+3. Use H2-H6 for any sub-headings. NEVER use H1.
+4. Follow with detailed paragraphs (<p>), lists (<ul>), etc.
+5. Keep paragraphs short and concise.
+6. Return ONLY clean HTML code. Do NOT wrap in <html> or <body>.`
 }
 
 export function buildBatchChunkUserPrompt(
   title: string,
   headings: Array<{ level: number; title: string; index: number }>,
+  secondaryKeywords: string,
   toneOfVoice: string,
-  lang = 'Vietnamese'
+  lang = 'Vietnamese',
+  internalLinks?: string
 ): string {
   const headingsList = headings
     .map(h => `${h.index + 1}. H${h.level || 2}: "${h.title}" (id: heading-${h.index})`)
     .join('\n')
 
+  let internalLinksBlock = ''
+  if (internalLinks) {
+    let links: any[] = []
+    if (Array.isArray(internalLinks)) {
+      links = internalLinks
+    } else if (typeof internalLinks === 'string') {
+      try {
+        const parsed = JSON.parse(internalLinks)
+        if (Array.isArray(parsed)) links = parsed
+      } catch (e) {
+        // Not a JSON string
+        if (internalLinks.trim()) {
+          internalLinksBlock = `\nINTERNAL LINKS TO INCLUDE (NATURALLY):\n${internalLinks}`
+        }
+      }
+    }
+
+    if (links.length > 0) {
+      internalLinksBlock = `\nINTERNAL LINKS TO INCLUDE (NATURALLY):
+Intersperse these links naturally within the text whenever the topic is relevant. Use <a> tags.
+${links.map(l => {
+  const formattedUrl = (l.url || '').startsWith('http') || (l.url || '').startsWith('/') ? l.url : `/${l.url}`
+  return `- URL: ${formattedUrl}, Anchor Text: ${l.title}`
+}).join('\n')}`
+    }
+  }
+
   return `Write content for MULTIPLE sections of the article "${title}".
 Tone: ${toneOfVoice}. Output language: ${lang}.
+Secondary keywords to include (naturally): ${secondaryKeywords || 'N/A'}
+${internalLinksBlock}
 
 SECTIONS TO WRITE (IN ORDER):
 ${headingsList}
@@ -233,7 +298,12 @@ REQUIREMENTS:
 5. Follow the heading with detailed paragraphs (<p>), lists (<ul>), etc.
 6. Ensure each heading includes its hierarchical numbering as provided in the list.
 7. Keep paragraphs short and concise, and focus closely on the heading topic.
-8. Return ONLY clean HTML code. Do NOT wrap in <html> or <body>.`
+8. Integrate the main keyword (from the title: "${title}") naturally into headings and content where appropriate.
+9. If internal links are provided, intersperse them naturally within the paragraphs where contextually appropriate.
+10. STRICT RULE: DO NOT add any other links (internal or external) that are not provided in the list above.
+11. Integrate the provided secondary keywords naturally throughout the content of these sections.
+12. Use H2-H6 for heading structure. NEVER use H1 tags.
+13. Return ONLY clean HTML code. Do NOT wrap in <html> or <body>.`
 }
 
 

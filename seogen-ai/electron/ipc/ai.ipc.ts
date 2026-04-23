@@ -2,6 +2,7 @@ import { ipcMain, BrowserWindow } from 'electron'
 import Store from 'electron-store'
 import axios from 'axios'
 import { buildMetaGenerationPrompt } from '../lib/prompts'
+import { getKnex } from '../services/db/knex.service'
 
 interface AIProfile {
   id: string
@@ -218,6 +219,32 @@ async function generateWithFallback(
   )
 }
 
+async function saveAiLog(data: {
+  provider: string
+  model?: string
+  messages: any
+  response?: string
+  duration_ms: number
+  status: 'success' | 'error'
+  error_message?: string
+}) {
+  try {
+    const db = getKnex()
+    await db('ai_logs').insert({
+      provider: data.provider,
+      model: data.model || 'unknown',
+      messages: JSON.stringify(data.messages),
+      response: data.response,
+      duration_ms: data.duration_ms,
+      status: data.status,
+      error_message: data.error_message,
+      created_at: db.fn.now()
+    })
+  } catch (err) {
+    console.error('Failed to save AI log:', err)
+  }
+}
+
 // ─── IPC Registration ───
 
 export function registerAiIpc(store: Store) {
@@ -276,11 +303,37 @@ export function registerAiIpc(store: Store) {
     const config = store.get('aiConfig') as AIConfig | undefined
     if (!config) return { success: false, error: 'Chưa cấu hình AI API key' }
 
+    const start = Date.now()
     try {
       const result = await generateWithFallback(payload, config, store)
+      const duration = Date.now() - start
+      
+      // Determine provider/model for logging (from active profile)
+      const activeProfile = config.profiles?.find(p => p.active)
+      await saveAiLog({
+        provider: payload.provider || activeProfile?.provider || 'unknown',
+        model: payload.model || activeProfile?.model,
+        messages: payload.messages,
+        response: result,
+        duration_ms: duration,
+        status: 'success'
+      })
+
       return { success: true, content: result }
     } catch (err: unknown) {
+      const duration = Date.now() - start
       const error = err as Error
+      const activeProfile = config.profiles?.find(p => p.active)
+      
+      await saveAiLog({
+        provider: payload.provider || activeProfile?.provider || 'unknown',
+        model: payload.model || activeProfile?.model,
+        messages: payload.messages,
+        duration_ms: duration,
+        status: 'error',
+        error_message: error.message
+      })
+
       return { success: false, error: error.message }
     }
   })
@@ -294,18 +347,37 @@ export function registerAiIpc(store: Store) {
     const lang = (store.get('outputLanguage') as string) || 'Vietnamese'
     const prompt = buildMetaGenerationPrompt(keyword, title, content.slice(0, 500), lang)
 
+    const start = Date.now()
     try {
       const raw = await generateWithFallback({
         provider,
         messages: [{ role: 'user', content: prompt }],
       }, config, store)
 
+      const duration = Date.now() - start
       const jsonMatch = raw.match(/\{[\s\S]*\}/)
       if (!jsonMatch) throw new Error('AI không trả về JSON hợp lệ')
       const parsed = JSON.parse(jsonMatch[0])
+
+      await saveAiLog({
+        provider,
+        messages: [{ role: 'user', content: prompt }],
+        response: raw,
+        duration_ms: duration,
+        status: 'success'
+      })
+
       return { success: true, ...parsed }
     } catch (err: unknown) {
+      const duration = Date.now() - start
       const error = err as Error
+      await saveAiLog({
+        provider,
+        messages: [{ role: 'user', content: prompt }],
+        duration_ms: duration,
+        status: 'error',
+        error_message: error.message
+      })
       return { success: false, error: error.message }
     }
   })
@@ -319,5 +391,42 @@ export function registerAiIpc(store: Store) {
     exhaustedProfileIds.clear()
     store.set('exhaustedProfiles', [])
     return { success: true }
+  })
+
+  // Log management
+  ipcMain.handle('ai:listLogs', async (_event, { page = 1, limit = 20 }) => {
+    try {
+      const db = getKnex()
+      const offset = (page - 1) * limit
+      const logs = await db('ai_logs')
+        .orderBy('created_at', 'desc')
+        .limit(limit)
+        .offset(offset)
+      
+      const count = await db('ai_logs').count('id as cnt').first()
+      return { success: true, logs, total: Number(count?.cnt || 0) }
+    } catch (err: any) {
+      return { success: false, error: err.message }
+    }
+  })
+
+  ipcMain.handle('ai:deleteLog', async (_event, id: number) => {
+    try {
+      const db = getKnex()
+      await db('ai_logs').where({ id }).delete()
+      return { success: true }
+    } catch (err: any) {
+      return { success: false, error: err.message }
+    }
+  })
+
+  ipcMain.handle('ai:clearLogs', async () => {
+    try {
+      const db = getKnex()
+      await db('ai_logs').truncate()
+      return { success: true }
+    } catch (err: any) {
+      return { success: false, error: err.message }
+    }
   })
 }

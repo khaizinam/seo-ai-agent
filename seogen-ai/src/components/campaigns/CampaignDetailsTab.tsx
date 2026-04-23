@@ -90,6 +90,11 @@ export default function CampaignDetailsTab({ campaignId }: Props) {
         setInfoKws(kws.filter(k => k.intent === 'informational').map(k => k.keyword))
       }
     }).finally(() => setFetchLoading(false))
+
+    return () => {
+      setAiLoading(false)
+      setAiOverlayVisible(false)
+    }
   }, [campaignId, isEdit])
 
   const validate = (): boolean => {

@@ -38,18 +38,18 @@ export default function ArticleWizard() {
   // ─── Article Data State ───
   const [articleData, setArticleData] = useState<any>({
     current_step: 1,
-    highest_unlocked_step: 1,
+    highest_unlocked_step: 4,
     title: '', status: 'draft',
     campaign_id: '', keyword_id: '', persona_id: '',
     week_number: 1, article_type: 'satellite',
     content_html: '', meta_title: '', meta_description: '',
-    thumbnail_prompt: '', content_social: [],
+    thumbnail_prompt: '', content_social: [], slug: '',
     // Linear fields
     campaign_summary: '', tone_of_voice: 'friendly',
     target_audience: '', output_language: outputLanguage || 'Vietnamese',
     primary_keywords: '[]', secondary_keywords: '[]',
     keyword_placement_rules: '', eeat_summary: '',
-    qna_list: '[]', outline_data: '[]'
+    qna_list: '[]', outline_data: '[]', internal_links: []
   })
 
   // UI State
@@ -80,6 +80,15 @@ export default function ArticleWizard() {
     setToast({ message: 'Đã huỷ tiến trình AI', type: 'info' })
   }
 
+  useEffect(() => {
+    return () => {
+      // Cleanup on unmount to prevent "locked" states from sticking
+      setGenerating(false)
+      setAiOverlayVisible(false)
+      abortRef.current = true
+    }
+  }, [])
+
   // ─── Loading Dependencies ───
   useEffect(() => {
     const init = async () => {
@@ -97,18 +106,19 @@ export default function ArticleWizard() {
            setArticleData((prev: any) => ({
              ...prev,
              ...art,
-             campaign_id: art.campaign_id?.toString() || '',
-             keyword_id: art.keyword_id?.toString() || '',
-             persona_id: art.persona_id?.toString() || (pers?.length ? pers[0].id.toString() : ''),
+             // Keep IDs as numbers for better matching with SelectField options
+             campaign_id: art.campaign_id || '',
+             keyword_id: art.keyword_id || '',
+             persona_id: art.persona_id || (pers?.length ? pers[0].id : ''),
              content_social: typeof art.content_social === 'string' ? JSON.parse(art.content_social || '[]') : (art.content_social || []),
-             // fallback default for linear fields if null
+             internal_links: typeof art.internal_links === 'string' ? JSON.parse(art.internal_links || '[]') : (art.internal_links || []),
              current_step: art.current_step || 1,
-             highest_unlocked_step: art.highest_unlocked_step || 1,
+             highest_unlocked_step: 4,
            }))
         }
       } else {
         if (pers && pers.length > 0) {
-          setArticleData((prev: any) => ({ ...prev, persona_id: pers[0].id.toString() }))
+          setArticleData((prev: any) => ({ ...prev, persona_id: pers[0].id }))
         }
       }
       setLoadingContent(false)
@@ -119,9 +129,21 @@ export default function ArticleWizard() {
   useEffect(() => {
     if (!articleData.campaign_id) { setKeywords([]); return }
     invoke<any[]>('keyword:list', +articleData.campaign_id).then(kws => {
-      setKeywords(kws || [])
+      const list = kws || []
+      setKeywords(list)
+      
+      // Auto-match keyword_id if missing but keyword string is present (e.g. from planned articles)
+      if (!articleData.keyword_id && (articleData.keyword || articleData.keyword_from_db) && list.length > 0) {
+        const name = articleData.keyword || articleData.keyword_from_db
+        const found = list.find(k => k.keyword.toLowerCase() === name.toLowerCase())
+        if (found) {
+          updateData({ keyword_id: found.id })
+          // We don't necessarily need to autoSave here as it might trigger unexpected updates, 
+          // but we update the UI state so it shows up selected.
+        }
+      }
     })
-  }, [articleData.campaign_id])
+  }, [articleData.campaign_id, articleData.keyword, articleData.keyword_from_db])
 
   // ─── Handlers ───
   const updateData = (updates: Partial<typeof articleData>) => {
@@ -129,11 +151,7 @@ export default function ArticleWizard() {
   }
 
   const handleTabClick = (stepId: number) => {
-    if (stepId <= articleData.highest_unlocked_step) {
-      updateData({ current_step: stepId })
-    } else {
-      setToast({ message: "Vui lòng hoàn thành bước hiện tại trước!", type: 'info' })
-    }
+    updateData({ current_step: stepId })
   }
 
   // Auto save the whole object
@@ -147,6 +165,7 @@ export default function ArticleWizard() {
     payload.keyword_id = payload.keyword_id ? +payload.keyword_id : null
     payload.persona_id = payload.persona_id ? +payload.persona_id : null
     if (typeof payload.content_social !== 'string') payload.content_social = JSON.stringify(payload.content_social || [])
+    if (typeof payload.internal_links !== 'string') payload.internal_links = JSON.stringify(payload.internal_links || [])
     
     // Xóa các trường dư thừa từ JOIN / metadata không có trong bảng articles thực tế
     delete payload.keyword
@@ -222,7 +241,6 @@ export default function ArticleWizard() {
             {WIZARD_STEPS.map((step, idx) => {
               const isActive = articleData.current_step === step.id
               const isPassed = step.id < articleData.current_step
-              const isLocked = step.id > articleData.highest_unlocked_step
 
               return (
                 <div 
@@ -230,8 +248,8 @@ export default function ArticleWizard() {
                   onClick={() => handleTabClick(step.id)}
                   style={{ 
                     display: 'flex', alignItems: 'center', gap: 12, 
-                    cursor: isLocked ? 'not-allowed' : 'pointer',
-                    opacity: isLocked ? 0.4 : 1,
+                    cursor: 'pointer',
+                    opacity: 1,
                     flex: 1, position: 'relative'
                   }}
                 >
@@ -310,7 +328,12 @@ export default function ArticleWizard() {
         </div>
 
         {/* RIGHT PANE - Sidebar (Settings) */}
-        <div style={{ overflowY: 'auto' }}>
+        <div style={{ 
+          overflowY: 'auto', 
+          background: 'var(--surface-1)', 
+          borderLeft: '1px solid var(--border)',
+          scrollbarWidth: 'thin'
+        }}>
           <ArticleSidebar
              campaigns={campaigns} personas={personas} keywords={keywords}
              selCampaign={articleData.campaign_id} setSelCampaign={(v) => autoSave({campaign_id: v})}
@@ -325,9 +348,15 @@ export default function ArticleWizard() {
              status={articleData.status} setStatus={(v) => autoSave({status: v})}
              weekNumber={articleData.week_number} setWeekNumber={(v) => autoSave({week_number: v})}
              articleType={articleData.article_type} setArticleType={(v) => autoSave({article_type: v})}
+             slug={articleData.slug} setSlug={(v) => autoSave({slug: v})}
+             internalLinks={articleData.internal_links} setInternalLinks={(v) => autoSave({internal_links: v})}
              plannedKeywordName={articleData.keyword || articleData.keyword_from_db || ''}
+             articleData={articleData}
              isEdit={isEdit} plannedId={plannedId}
              saving={saving} generating={generating}
+             setGenerating={setGenerating}
+             setAiOverlayVisible={setAiOverlayVisible}
+             setAiOverlayStep={setAiOverlayStep}
              onSave={async () => {
                setSaving(true)
                const res = await autoSave({})
