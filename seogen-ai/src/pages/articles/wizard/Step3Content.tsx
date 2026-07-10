@@ -40,7 +40,7 @@ export default function Step3Content(props: any) {
     
     let generatedContent = ''
 
-    const BATCH_SIZE = 5;
+    const BATCH_SIZE = 3;
     const outlineWithIndex = outlines.map((item: any, index: number) => ({ ...item, index }));
     const batches: typeof outlineWithIndex[] = [];
     for (let i = 0; i < outlineWithIndex.length; i += BATCH_SIZE) {
@@ -71,9 +71,14 @@ export default function Step3Content(props: any) {
         messages: [{ role: 'system', content: 'You are an SEO expert writer. Output clean HTML.' }, { role: 'user', content: introPrompt }]
       })
       if (!resIntro.success) throw new Error(resIntro.error || 'Unknown AI error')
-      generatedContent += `\n<!-- INTRO -->\n<div class="article-intro">\n${resIntro.content.replace(/```html|```/g, '').trim()}\n</div>\n`
+      
+      const cleanIntro = resIntro.content.replace(/```html|```/gi, '').trim()
+      generatedContent += `\n<!-- INTRO -->\n<div class="article-intro">\n${cleanIntro}\n</div>\n`
     } catch (e: any) {
+      setGenerating(false)
+      setAiOverlayVisible(false)
       if (!abortRef.current) setToast({ message: `Lỗi sinh phần Intro: ${e.message}`, type: 'error' })
+      return // Stop the whole process
     }
 
     // 2. Gom nhóm Dàn ý (Batching)
@@ -103,15 +108,19 @@ export default function Step3Content(props: any) {
         const resChunk = await invoke<{success: boolean, content: string, error?: string}>('ai:generate', {
           messages: [{ role: 'system', content: 'You are an SEO expert writer. Output clean HTML.' }, { role: 'user', content: batchPrompt }]
         })
-        if (resChunk.success) {
-           generatedContent += `\n${resChunk.content.replace(/```html|```/g, '').trim()}\n`
-        }
-      } catch (e) {
-        if (!abortRef.current) setToast({ message: `Lỗi sinh nhóm ${i + 1}`, type: 'info' })
+        if (!resChunk.success) throw new Error(resChunk.error || 'Unknown AI error')
+
+        const cleanChunk = resChunk.content.replace(/```html|```/gi, '').trim()
+        generatedContent += `\n${cleanChunk}\n`
+      } catch (e: any) {
+        setGenerating(false)
+        setAiOverlayVisible(false)
+        if (!abortRef.current) setToast({ message: `Lỗi sinh nhóm ${i + 1}: ${e.message}`, type: 'error' })
+        return // Stop the whole process
       }
 
-      // Ngủ 1.5s để giảm tải rate limit
-      await sleep(1500)
+      // Ngủ 2s để giảm tải rate limit
+      await sleep(2000)
     }
 
     // 3. Sinh FAQ Schema phần QnA

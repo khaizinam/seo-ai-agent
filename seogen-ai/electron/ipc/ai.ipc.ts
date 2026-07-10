@@ -38,10 +38,11 @@ interface AIGeneratePayload {
 // ─── Rate limit detection ───
 
 const exhaustedProfileIds = new Set<string>()
+const exhaustedTimeouts = new Map<string, NodeJS.Timeout>()
 
 function isRateLimitError(err: any): boolean {
   const status = err?.response?.status
-  if (status === 429) return true
+  if (status === 429 || status === 503 || status === 504) return true
 
   const msg = (err?.response?.data?.error?.message || err?.message || '').toLowerCase()
   // Gemini
@@ -52,6 +53,39 @@ function isRateLimitError(err: any): boolean {
   if (msg.includes('insufficient_quota') || msg.includes('rate_limit_exceeded')) return true
 
   return false
+}
+
+function isTransientError(err: any): boolean {
+  const status = err?.response?.status
+  // 500: Internal Server Error (sometimes transient in AI APIs)
+  // 502: Bad Gateway
+  // 503: Service Unavailable
+  // 504: Gateway Timeout
+  if ([500, 502, 503, 504].includes(status)) return true
+  
+  // Timeout errors
+  if (err.code === 'ECONNABORTED' || err.message?.toLowerCase().includes('timeout')) return true
+  
+  return false
+}
+
+async function retryRequest<T>(fn: () => Promise<T>, maxRetries = 4): Promise<T> {
+  let lastErr: any
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn()
+    } catch (err: any) {
+      lastErr = err
+      if (isTransientError(err) && i < maxRetries - 1) {
+        const delay = Math.pow(2, i) * 3000 // Exponential backoff: 3s, 6s, 12s, 24s
+        console.log(`AI Transient Error (${err.response?.status || err.code}). Retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+        continue
+      }
+      throw err
+    }
+  }
+  throw lastErr
 }
 
 function notifyModelSwitch(fromProfile: AIProfile, toProfile: AIProfile, reason: string) {
@@ -110,11 +144,11 @@ async function generateWithProvider(payload: AIGeneratePayload, config: AIConfig
     if (systemMsg) {
       body.systemInstruction = { parts: [{ text: systemMsg.content }] }
     }
-    const res = await axios.post(
+    const res = await retryRequest(() => axios.post(
       `https://generativelanguage.googleapis.com/v1beta/models/${actualModel}:generateContent?key=${key}`,
       body,
       { timeout: 300000 }
-    )
+    ))
     return res.data.candidates?.[0]?.content?.parts?.[0]?.text || ''
   }
 
@@ -122,7 +156,7 @@ async function generateWithProvider(payload: AIGeneratePayload, config: AIConfig
     const key = apiKey || config.claudeKey
     const actualModel = model || payload.model || config.claudeModel || 'claude-3-5-sonnet-20241022'
     const systemMsg = payload.messages.find(m => m.role === 'system')
-    const res = await axios.post(
+    const res = await retryRequest(() => axios.post(
       'https://api.anthropic.com/v1/messages',
       {
         model: actualModel,
@@ -140,14 +174,14 @@ async function generateWithProvider(payload: AIGeneratePayload, config: AIConfig
         },
         timeout: 300000,
       }
-    )
+    ))
     return res.data.content?.[0]?.text || ''
   }
 
   if (provider === 'copilot') {
     const key = apiKey || config.copilotKey
     const actualModel = model || payload.model || config.copilotModel || 'gpt-4o'
-    const res = await axios.post(
+    const res = await retryRequest(() => axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
         model: actualModel,
@@ -159,7 +193,7 @@ async function generateWithProvider(payload: AIGeneratePayload, config: AIConfig
         headers: { Authorization: `Bearer ${key}`, 'content-type': 'application/json' },
         timeout: 300000,
       }
-    )
+    ))
     return res.data.choices?.[0]?.message?.content || ''
   }
 
@@ -198,7 +232,17 @@ async function generateWithFallback(
       if (isRateLimitError(err)) {
         // Mark this profile as exhausted
         exhaustedProfileIds.add(profile.id)
-        store.set('exhaustedProfiles', Array.from(exhaustedProfileIds))
+        
+        // Auto-clear from exhausted list after 5 minutes
+        if (exhaustedTimeouts.has(profile.id)) {
+          clearTimeout(exhaustedTimeouts.get(profile.id)!)
+        }
+        const timeout = setTimeout(() => {
+          exhaustedProfileIds.delete(profile.id)
+          exhaustedTimeouts.delete(profile.id)
+          console.log(`[AI] Profile ${profile.name} (ID: ${profile.id}) has been restored to rotation.`)
+        }, 5 * 60 * 1000)
+        exhaustedTimeouts.set(profile.id, timeout)
 
         // Find next available profile to notify
         const nextProfile = sorted.find(p => p.id !== profile.id && !exhaustedProfileIds.has(p.id))
@@ -388,6 +432,8 @@ export function registerAiIpc(store: Store) {
   })
 
   ipcMain.handle('ai:clearExhaustedProfiles', async () => {
+    exhaustedTimeouts.forEach(t => clearTimeout(t))
+    exhaustedTimeouts.clear()
     exhaustedProfileIds.clear()
     store.set('exhaustedProfiles', [])
     return { success: true }
