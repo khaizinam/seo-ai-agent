@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  seogen-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: seogen_builder
+    volumes:
+      - .:/app
+      # Tránh ghi đè node_modules đã build cho Linux bằng node_modules trên Windows host
+      - /app/node_modules
+      # Cache Electron & Builder downloads để tăng tốc những lần build sau
+      - electron-cache:/root/.cache/electron
+      - electron-builder-cache:/root/.cache/electron-builder
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=development
+    # Mặc định container chạy lệnh này để đóng gói ra file .exe cho Windows
+    command: yarn build:win
+
+volumes:
+  electron-cache:
+  electron-builder-cache:
