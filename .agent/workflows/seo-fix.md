@@ -23,7 +23,6 @@ description: Sửa và tối ưu bài viết theo chuẩn SEO và template HTML 
 ### Bước 3: Sửa và tối ưu
 - Sửa HTML theo template chuẩn
 - Thêm/sửa heading structure
-- Thêm/sửa mục lục
 - Tối ưu từ khóa
 - Thêm FAQ nếu thiếu
 

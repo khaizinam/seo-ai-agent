@@ -1,32 +1,54 @@
 import Knex, { Knex as KnexType } from 'knex'
 import Store from 'electron-store'
+import path from 'path'
 
 export interface DBConfig {
-  type: 'mysql' | 'mariadb' | 'postgresql'
-  host: string
-  port: number
-  database: string
-  user: string
-  password: string
+  type: 'mysql' | 'mariadb' | 'postgresql' | 'sqlite'
+  host?: string
+  port?: number
+  database?: string
+  user?: string
+  password?: string
   ssl?: boolean
+  filename?: string
 }
 
 let knexInstance: KnexType | null = null
 
 function getClient(type: DBConfig['type']): string {
   if (type === 'postgresql') return 'pg'
+  if (type === 'sqlite') return 'sqlite3'
   return 'mysql2' // mysql and mariadb both use mysql2
 }
 
 export function createKnex(config: DBConfig): KnexType {
+  if (config.type === 'sqlite') {
+    let userDataPath = '.'
+    try {
+      const { app } = require('electron')
+      userDataPath = app ? app.getPath('userData') : '.'
+    } catch (e) {
+      userDataPath = '.'
+    }
+    const filename = config.filename || path.join(userDataPath, 'seogen.sqlite')
+    return Knex({
+      client: 'sqlite3',
+      connection: {
+        filename,
+      },
+      useNullAsDefault: true,
+      pool: { min: 1, max: 1 },
+    })
+  }
+
   return Knex({
     client: getClient(config.type),
     connection: {
-      host: config.host,
-      port: config.port,
-      database: config.database,
-      user: config.user,
-      password: config.password,
+      host: config.host || '',
+      port: config.port || 0,
+      database: config.database || '',
+      user: config.user || '',
+      password: config.password || '',
       ssl: config.ssl ? { rejectUnauthorized: false } : undefined,
     },
     pool: { min: 2, max: 10 },
@@ -309,6 +331,16 @@ export async function runMigrations(store: Store): Promise<void> {
       t.timestamp('created_at').defaultTo(knex.fn.now())
     })
   }
+
+  // app_configs (stores synced local settings profiles)
+  if (!(await knex.schema.hasTable('app_configs'))) {
+    await knex.schema.createTable('app_configs', (t) => {
+      t.increments('id').primary()
+      t.string('profile_name', 255).notNullable().unique()
+      t.text('config_json', 'longtext').notNullable()
+      t.timestamps(true, true)
+    })
+  }
 }
 
 export async function resetDB(store: Store): Promise<{ success: boolean; message: string }> {
@@ -318,17 +350,19 @@ export async function resetDB(store: Store): Promise<{ success: boolean; message
     // Disable foreign key checks for dropping
     if (knex.client.config.client === 'mysql2' || knex.client.config.client === 'mysql') {
       await knex.raw('SET FOREIGN_KEY_CHECKS = 0')
-    } else if (knex.client.config.client === 'pg') {
-      // In PG we can use DROP TABLE ... CASCADE or just drop in order
+    } else if (knex.client.config.client === 'sqlite3') {
+      await knex.raw('PRAGMA foreign_keys = OFF')
     }
 
-    const tables = ['ai_logs', 'webhooks', 'seo_audits', 'articles', 'keywords', 'campaigns', 'personas', 'thumbnail_prompts']
+    const tables = ['ai_logs', 'webhooks', 'seo_audits', 'articles', 'keywords', 'campaigns', 'personas', 'thumbnail_prompts', 'app_configs']
     for (const table of tables) {
       await knex.schema.dropTableIfExists(table)
     }
 
     if (knex.client.config.client === 'mysql2' || knex.client.config.client === 'mysql') {
       await knex.raw('SET FOREIGN_KEY_CHECKS = 1')
+    } else if (knex.client.config.client === 'sqlite3') {
+      await knex.raw('PRAGMA foreign_keys = ON')
     }
 
     // Run migrations again

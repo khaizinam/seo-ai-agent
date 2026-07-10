@@ -1,6 +1,6 @@
 {
   "name": "seogen-ai",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "SEO AI Content Generator - Desktop App for Windows",
   "main": "dist-electron/main.js",
   "author": "SEOGEN Team",
@@ -43,6 +43,7 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0",
     "sharp": "^0.33.5",
+    "sqlite3": "^6.0.1",
     "tailwind-merge": "^2.5.5",
     "turndown": "^7.2.0",
     "zustand": "^5.0.1"

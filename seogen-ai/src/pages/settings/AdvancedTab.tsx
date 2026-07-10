@@ -45,6 +45,25 @@ export default function AdvancedTab() {
     alert('Đã dọn dẹp bộ nhớ đệm và các phiên làm việc thành công!')
   }
 
+  const handleExportSettings = async () => {
+    const res = await invoke<{ success: boolean; message: string }>('settings:export')
+    if (res.success) {
+      setToast({ message: res.message, type: 'success' })
+    } else {
+      setToast({ message: res.message, type: 'error' })
+    }
+  }
+
+  const handleImportSettings = async () => {
+    const res = await invoke<{ success: boolean; message: string }>('settings:import')
+    if (res.success) {
+      alert(res.message)
+      window.location.reload()
+    } else {
+      setToast({ message: res.message, type: 'error' })
+    }
+  }
+
   const handleResetDB = async () => {
     setResetLoading(true)
     const res = await invoke<{ success: boolean; message: string }>('db:reset')
@@ -168,6 +187,24 @@ export default function AdvancedTab() {
           <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8 }}>
             Hiện có <strong>{personas.length}</strong> giọng văn trong hệ thống.
           </div>
+        </div>
+      </div>
+
+      {/* Sao lưu và Khôi phục Cấu hình */}
+      <div className="glass-card" style={{ padding: 24 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <ShieldAlert size={18} color="var(--brand-primary)" /> Sao lưu &amp; Khôi phục cấu hình
+        </h2>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>
+          Xuất toàn bộ cấu hình ứng dụng (bao gồm các API Key, cài đặt theme, và lịch sử kết nối Database) để lưu trữ hoặc đem sang máy tính khác, hoặc nhập file cấu hình cũ từ máy của bạn.
+        </p>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button className="btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleExportSettings}>
+            📤 Xuất cấu hình (Export)
+          </button>
+          <button className="btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleImportSettings}>
+            📥 Nhập cấu hình (Import)
+          </button>
         </div>
       </div>
 

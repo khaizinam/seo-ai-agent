@@ -18,7 +18,7 @@ This project uses a **Linear 4-Step Wizard** to generate high-quality SEO articl
 
 ### Step 3: Full Content Generation (Chunking)
 - **Mechanism**: To avoid context loss and "AI laziness," the content is generated in batches (Chunks).
-- **Skill 3a (Intro)**: `buildIntroUserPrompt`. Generates hook, intro paragraphs, and Table of Contents (ToC).
+- **Skill 3a (Intro)**: `buildIntroUserPrompt`. Generates hook and intro paragraphs.
 - **Skill 3b (Body Chunks)**: `buildBatchChunkUserPrompt`. Loops through the outline in batches of 5 headings.
 - **Skill 3c (QnA)**: Appends an FAQ schema based on the plan.
 - **Final Result**: A complete HTML article with structured headings (H2-H6), internal links, and SEO-optimized paragraphs.

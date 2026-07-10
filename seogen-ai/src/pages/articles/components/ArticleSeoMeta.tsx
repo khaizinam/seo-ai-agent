@@ -29,6 +29,9 @@ export function ArticleSeoMeta({
           AI Gen Meta
         </button>
       </div>
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: -8, marginBottom: 16, lineHeight: 1.5 }}>
+        💡 Đây là nội dung sơ lược về chiến lược. Nếu bạn muốn thông tin sinh động và sát sườn hơn sau khi đã có bài viết đầy đủ ở Bước 3, hãy nhấp vào nút <strong>AI Gen Meta</strong> ở trên để sinh lại.
+      </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div>
           <label className="label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

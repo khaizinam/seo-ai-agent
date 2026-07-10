@@ -1,6 +1,7 @@
-import { ipcMain, shell, session, app } from 'electron'
+import { ipcMain, shell, session, app, dialog } from 'electron'
 import Store from 'electron-store'
 import { join } from 'path'
+import * as fs from 'fs/promises'
 
 export function registerSettingsIpc(store: Store) {
   // Get all app settings
@@ -63,6 +64,48 @@ export function registerSettingsIpc(store: Store) {
   // Open thumbnails folder
   ipcMain.handle('settings:openThumbnailDir', async () => {
     shell.openPath(join(app.getPath('userData'), 'thumbnails'))
+  })
+
+  // Export Settings Backup
+  ipcMain.handle('settings:export', async () => {
+    const { filePath } = await dialog.showSaveDialog({
+      title: 'Xuất cấu hình ứng dụng',
+      defaultPath: join(app.getPath('downloads'), 'seogen_settings_backup.json'),
+      filters: [{ name: 'JSON Files', extensions: ['json'] }]
+    })
+    
+    if (!filePath) return { success: false, message: 'Đã hủy xuất cấu hình' }
+    
+    try {
+      const data = store.store // Raw unmasked store database
+      await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
+      return { success: true, message: 'Xuất cấu hình thành công!' }
+    } catch (e: any) {
+      return { success: false, message: 'Lỗi xuất cấu hình: ' + e.message }
+    }
+  })
+
+  // Import Settings Backup
+  ipcMain.handle('settings:import', async () => {
+    const { filePaths } = await dialog.showOpenDialog({
+      title: 'Nhập cấu hình ứng dụng',
+      filters: [{ name: 'JSON Files', extensions: ['json'] }],
+      properties: ['openFile']
+    })
+    
+    if (!filePaths || filePaths.length === 0) return { success: false, message: 'Đã hủy nhập cấu hình' }
+    
+    try {
+      const raw = await fs.readFile(filePaths[0], 'utf-8')
+      const parsed = JSON.parse(raw)
+      
+      // Overwrite store with parsed data
+      store.store = parsed
+      
+      return { success: true, message: 'Nhập cấu hình thành công! Hãy khởi động lại ứng dụng để áp dụng cấu hình mới.' }
+    } catch (e: any) {
+      return { success: false, message: 'Lỗi nhập cấu hình: ' + e.message }
+    }
   })
 
   // Clear all settings (factory reset)

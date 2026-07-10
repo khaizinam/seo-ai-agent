@@ -210,8 +210,30 @@ async function generateWithFallback(
   const autoSwitch = store.get('autoSwitchModel') as boolean
   const profiles = config.profiles || []
 
+  // Helper function to increment request count
+  const incrementProfileReqCount = (pId: string) => {
+    try {
+      const currentConfig = store.get('aiConfig') as AIConfig | undefined
+      if (currentConfig && Array.isArray(currentConfig.profiles)) {
+        currentConfig.profiles = currentConfig.profiles.map((p: any) => {
+          if (p.id === pId) {
+            return { ...p, reqCount: (p.reqCount || 0) + 1 }
+          }
+          return p
+        })
+        store.set('aiConfig', currentConfig)
+      }
+    } catch (e) {
+      console.error('[AI] Error incrementing profile reqCount:', e)
+    }
+  }
+
   if (!autoSwitch || profiles.length <= 1) {
     // No fallback — just use normal generation
+    const activeProfile = profiles.find(p => p.active)
+    if (activeProfile) {
+      incrementProfileReqCount(activeProfile.id)
+    }
     return generateWithProvider(payload, config)
   }
 
@@ -227,11 +249,28 @@ async function generateWithFallback(
     if (exhaustedProfileIds.has(profile.id)) continue
 
     try {
+      incrementProfileReqCount(profile.id)
       return await generateWithProvider(payload, config, profile)
     } catch (err: any) {
       if (isRateLimitError(err)) {
         // Mark this profile as exhausted
         exhaustedProfileIds.add(profile.id)
+        
+        // Also save exhaustedAt timestamp in store
+        try {
+          const currentConfig = store.get('aiConfig') as AIConfig | undefined
+          if (currentConfig && Array.isArray(currentConfig.profiles)) {
+            currentConfig.profiles = currentConfig.profiles.map((p: any) => {
+              if (p.id === profile.id) {
+                return { ...p, exhaustedAt: new Date().toISOString() }
+              }
+              return p
+            })
+            store.set('aiConfig', currentConfig)
+          }
+        } catch (e) {
+          console.error('[AI] Error saving exhaustedAt:', e)
+        }
         
         // Auto-clear from exhausted list after 5 minutes
         if (exhaustedTimeouts.has(profile.id)) {
@@ -436,6 +475,42 @@ export function registerAiIpc(store: Store) {
     exhaustedTimeouts.clear()
     exhaustedProfileIds.clear()
     store.set('exhaustedProfiles', [])
+
+    // Also reset exhaustedAt and reqCount in store config profiles
+    const config = store.get('aiConfig') as any
+    if (config && Array.isArray(config.profiles)) {
+      config.profiles = config.profiles.map((p: any) => ({
+        ...p,
+        reqCount: 0,
+        exhaustedAt: null
+      }))
+      store.set('aiConfig', config)
+    }
+    return { success: true }
+  })
+
+  // Reset counters and quota state for a single profile
+  ipcMain.handle('ai:resetSingleProfile', async (_event, profileId: string) => {
+    exhaustedProfileIds.delete(profileId)
+    if (exhaustedTimeouts.has(profileId)) {
+      clearTimeout(exhaustedTimeouts.get(profileId)!)
+      exhaustedTimeouts.delete(profileId)
+    }
+
+    const config = store.get('aiConfig') as any
+    if (config && Array.isArray(config.profiles)) {
+      config.profiles = config.profiles.map((p: any) => {
+        if (p.id === profileId) {
+          return {
+            ...p,
+            reqCount: 0,
+            exhaustedAt: null
+          }
+        }
+        return p
+      })
+      store.set('aiConfig', config)
+    }
     return { success: true }
   })
 

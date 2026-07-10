@@ -79,10 +79,9 @@ SEO & KEYWORD RULES:
 
 CONTENT STRUCTURE:
 - Start with an engaging hook (2-3 sentences that capture attention — a question, a surprising fact, or a pain point).
-- **Table of Contents**: Immediately after the hook, provide a "Mục lục" (Table of Contents) using an unnumbered list (<ul>) with anchor links to all H2-H3 headings (e.g., <a href="#heading-0">1. Section Title</a>).
 - Organize into clear sections with H2/H3 headings. Use H4-H6 for deeper subsections when needed.
 - **Hierarchical Numbering**: Manually number all headings (1., 1.1., 1.2., 2., etc.).
-- Flow: Hook intro → Table of Contents → Problem/Context → Main content sections → Practical examples/data → Conclusion with CTA.
+- Flow: Hook intro → Problem/Context → Main content sections → Practical examples/data → Conclusion with CTA.
 - End with a strong conclusion that summarizes key takeaways and includes a subtle call-to-action.
 - Use smooth transition phrases between sections for natural reading flow.
 
@@ -99,7 +98,7 @@ READABILITY:
 HTML FORMAT RULES:
 - HTML format only (no <html><body> wrappers, inner content only).
 - Use H2-H6 headings. Do NOT use H1.
-- Each heading MUST have a unique ID matching the Table of Contents links (e.g., <h2 id="heading-0">...</h2>).
+- Each heading MUST have a unique ID for navigation (e.g., <h2 id="heading-0">...</h2>).
 - By default, use well-structured paragraphs (<p>) instead of list tags.
 - EXCEPTION: For technical/tutorial/report content that naturally requires enumeration, you MAY use <ul>/<ol>/<li> with inline CSS:
   <ul style="padding-left:20px;margin:12px 0;list-style-type:disc">
@@ -195,14 +194,7 @@ ${links.map(l => {
     }
   }
 
-  const tocBlock = headings && headings.length > 0
-    ? `\nTABLE OF CONTENTS REQUIREMENT:
-Immediately after the introduction paragraphs, generate a "Mục lục" (Table of Contents) section.
-- Use a <ul> list.
-- Each item must be an anchor link to the respective heading ID (e.g., <a href="#heading-0">1. Title</a>).
-- Include all the following headings in the ToC:
-${headings.map(h => `- ${h.title} (ID: heading-${h.index})`).join('\n')}`
-    : ''
+  const tocBlock = ''
 
   return `Write the introduction for: "${title}"
 Campaign context: ${campaignSummary}
@@ -214,13 +206,12 @@ ${internalLinksBlock}
 REQUIREMENTS:
 1. Write 2-3 short paragraphs with an engaging hook.
 2. Include the main keyword (from the title: "${title}") naturally within the first 100 words.
-3. If Table of Contents is requested above, include it immediately after the intro paragraphs.
-4. Tone: ${toneOfVoice}. Output language: ${lang}.
-5. If internal links are provided, insert them naturally using <a> tags.
-6. STRICT RULE: DO NOT add any other internal or external links besides the ones provided.
-7. Integrate the provided secondary keywords naturally.
-8. Format as HTML. Use H2-H6 if needed for sub-sections, but DO NOT use H1.
-9. Return ONLY clean HTML code, no markdown wrappers, no explanations.`
+3. Tone: ${toneOfVoice}. Output language: ${lang}.
+4. If internal links are provided, insert them naturally using <a> tags.
+5. STRICT RULE: DO NOT add any other internal or external links besides the ones provided.
+6. Integrate the provided secondary keywords naturally.
+7. Format as HTML. Use H2-H6 if needed for sub-sections, but DO NOT use H1.
+8. Return ONLY clean HTML code, no markdown wrappers, no explanations.`
 }
 
 export function buildChunkUserPrompt(

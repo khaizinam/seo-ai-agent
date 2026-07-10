@@ -49,6 +49,8 @@ interface AIProfile {
   model: string
   apiKey: string
   active: boolean
+  reqCount?: number
+  exhaustedAt?: string | null
 }
 
 export default function AIProvidersTab() {
@@ -147,6 +149,14 @@ export default function AIProvidersTab() {
     })
     setTestResult({ ok: res.success, msg: res.message })
     setTesting(false)
+  }
+
+  const handleResetProfile = async (id: string) => {
+    const res = await invoke<{ success: boolean }>('ai:resetSingleProfile', id)
+    if (res.success) {
+      setToast({ message: 'Đã reset bộ đếm và trạng thái Quota thành công!', type: 'success' })
+      load()
+    }
   }
 
   const handleSaveProfile = async () => {
@@ -300,7 +310,9 @@ export default function AIProvidersTab() {
               <th>Tên cấu hình</th>
               <th>Provider</th>
               <th>Model</th>
-              <th style={{ width: 140, textAlign: 'right' }}>Thao tác</th>
+              <th style={{ width: 80 }}>Requests</th>
+              <th>Trạng thái Quota</th>
+              <th style={{ width: 160, textAlign: 'right' }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -333,14 +345,38 @@ export default function AIProvidersTab() {
                   </td>
                   <td>
                     <code style={{ fontSize: 11, background: 'var(--surface-3)', padding: '2px 6px', borderRadius: 4 }}>{p.model}</code>
-                    {exhaustedIds.includes(p.id) && (
-                      <span style={{ marginLeft: 8, fontSize: 10, color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
-                        ⚠ Hết limit
+                  </td>
+                  <td>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{p.reqCount || 0}</span>
+                  </td>
+                  <td>
+                    {p.exhaustedAt ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ fontSize: 10, color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: 4, fontWeight: 600, display: 'inline-block', width: 'fit-content' }}>
+                          ⚠️ Hết Quota
+                        </span>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                          Hết lúc: {new Date(p.exhaustedAt).toLocaleTimeString()} {new Date(p.exhaustedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: 10, color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
+                        🟢 Hoạt động tốt
                       </span>
                     )}
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      {((p.reqCount && p.reqCount > 0) || p.exhaustedAt) && (
+                        <button 
+                          className="btn-ghost" 
+                          style={{ padding: 4, color: 'var(--brand-primary)' }} 
+                          title="Reset bộ đếm & Quota" 
+                          onClick={() => handleResetProfile(p.id)}
+                        >
+                          <RefreshCw size={13} />
+                        </button>
+                      )}
                       {!p.active && (
                         <button className="btn-ghost" onClick={() => handleActivate(p.id)} title="Kích hoạt">
                           <Zap size={14} />

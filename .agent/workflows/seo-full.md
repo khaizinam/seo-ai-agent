@@ -29,7 +29,6 @@ description: Quy trình SEO đầy đủ - từ nghiên cứu từ khóa đến 
 ### Bước 4: Lập dàn ý bài viết
 - Heading structure (H3→H6)
 - Nội dung tóm tắt từng phần
-- Mục lục với anchor links
 
 ### Bước 5: Viết bài viết
 - Viết nội dung theo dàn ý

@@ -11,6 +11,13 @@
 
 ---
 
+## 📥 Tải Bản Cài Đặt (Download Release Builds)
+
+Mọi người có thể truy cập thư mục Google Drive dưới đây để xem và tải các phiên bản build mới nhất của SEOGEN AI để trải nghiệm và cài đặt dễ dàng:
+👉 **[Google Drive Link Tải Bản Cài Đặt](https://drive.google.com/drive/folders/1dXInIk-2qv6ieoex5zGUpA-Ufahw_ryo?usp=sharing)**
+
+---
+
 ## 🚀 Tính năng nổi bật
 
 ### 1. Quy trình AI toàn diện (Full Process)

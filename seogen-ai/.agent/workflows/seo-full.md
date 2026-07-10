@@ -18,5 +18,4 @@ Quy trình SEO đầy đủ từ nghiên cứu từ khóa đến xuất bản n�
 
 ## 🤖 Khả năng của Agent
 - Tự động hóa việc phân bổ từ khóa phụ.
-- Tự động tạo Table of Contents.
 - Đảm bảo tính nhất quán của giọng văn (Persona).

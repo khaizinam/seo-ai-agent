@@ -21,7 +21,6 @@ description: Viết bài SEO nhanh - lập dàn ý và xuất HTML CKEditor
 
 ### Bước 3: Lập dàn ý
 - Heading structure
-- Mục lục
 
 ### Bước 4: Viết & xuất HTML CKEditor (SONG NGỮ)
 - Viết nội dung Tiếng Việt theo template mẫu

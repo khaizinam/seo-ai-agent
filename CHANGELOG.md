@@ -14,6 +14,37 @@ và dự án áp dụng version hóa theo [Semantic Versioning](https://semver.o
 
 ---
 
+## [1.2.0] - Cập nhật Tính năng Tiện ích & Đồng bộ nâng cao (2026-07-10)
+
+Mọi người có thể vào xem và tải các phiên bản build tại link Google Drive này để trải nghiệm:
+👉 **[Google Drive Link Tải Bản Cài Đặt](https://drive.google.com/drive/folders/1dXInIk-2qv6ieoex5zGUpA-Ufahw_ryo?usp=sharing)**
+
+### ✨ Thêm mới (Added)
+- **Đồng bộ cấu hình Lên/Về Cloud (Settings Sync Profiles)**:
+  - Khởi tạo bảng `app_configs` lưu trữ cấu hình trên Cloud Database.
+  - Cho phép người dùng lưu trữ (Upload) cấu hình cài đặt cá nhân (AI Keys, theme, language, persona mặc định...) lên Cloud DB dưới dạng tên cấu hình tùy chọn (hỏi tạo cấu hình mới hoặc chọn ghi đè lên cấu hình đang có).
+  - Cho phép người dùng tải xuống (Download) cấu hình từ Cloud DB về máy cá nhân khi đi nhiều máy tính khác nhau, giúp đồng bộ cài đặt chỉ với 1 click.
+- **Giám sát số lượng Request & Thời gian hết Quota**:
+  - Tích hợp bộ đếm `reqCount` tự động tăng sau mỗi lần request thành công đến một AI Profile bất kỳ.
+  - Tự động bắt lỗi API và ghi nhận chính xác mốc thời gian hết hạn ngạch `exhaustedAt` (Ngày và giờ cụ thể) của từng API Key/Model.
+  - Hiển thị trực quan trạng thái Quota (🟢 Hoạt động tốt / ⚠️ Hết Quota lúc [Thời gian]) trong bảng quản lý AI Providers.
+  - Thêm nút Reset riêng lẻ kế bên mỗi AI Profile giúp người dùng khôi phục bộ đếm và trạng thái Quota cho riêng Model đó.
+- **Đồng bộ Dữ liệu CSDL (Data Sync)**:
+  - Bổ sung nút "Đồng bộ lên Cloud" (Push SQLite → Cloud) và "Đồng bộ xuống SQLite" (Pull Cloud → SQLite) khi kết nối với MySQL, PostgreSQL, MariaDB kèm thông báo cảnh báo bảo mật tránh mất mát dữ liệu.
+- **Sao lưu cài đặt bằng tệp JSON (Export/Import Local Settings)**:
+  - Bổ sung nút xuất (Export) và nhập (Import) tệp cấu hình JSON chứa toàn bộ cài đặt ứng dụng bao gồm API key chưa mã hóa tại tab **Nâng cao** để dễ dàng mang đi mọi nơi.
+
+### 🛠️ Thay đổi (Changed)
+- **Bỏ chức năng Tạo mục lục (Table of Contents)**:
+  - Loại bỏ các phần liên quan đến việc tạo mục lục bài viết khỏi prompt của AI (cả Frontend và Backend) do website bên ngoài sẽ tự động đảm nhiệm việc này.
+  - Cập nhật tài liệu kỹ năng `.agent` và các workflow liên quan (`seo-fix`, `seo-full`, `seo-write`).
+- **Khôi phục mật khẩu kết nối Database**:
+  - Ghi nhớ và nạp lại mật khẩu cũ của các kết nối cơ sở dữ liệu trước đó từ lịch sử kết nối của từng loại DB (SQLite, MySQL, Postgres, MariaDB) khi người dùng chuyển đổi qua lại giữa các tab DB.
+- **Tích hợp Native SQLite làm CSDL mặc định**:
+  - Thay thế cấu hình ban đầu bằng SQLite giúp người dùng không có kiến thức kỹ thuật có thể mở ứng dụng là sử dụng được ngay mà không cần tạo DB.
+
+---
+
 ## [1.0.0] - Phát hành Đầu tiên (Initial Release)
 
 ### ✨ Thêm mới (Added)
